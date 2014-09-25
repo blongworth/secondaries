@@ -1,0 +1,231 @@
+Secondary standard analysis
+========================================================
+
+`r as.character(format(Sys.Date(), format="%B %d, %Y"))`
+
+---
+
+Both Systems
+-------
+
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+require(ggplot2)
+require(plyr)
+
+#set parameters
+from <- '2014-01-01'
+to <- 'present' #present or date
+system <- 'usams' #cfams, usams, ams1 or both
+size <- c(0,300)
+#Setup ggplot palette
+# The palette with grey:
+cbPalette <- c("#E69F00", "#D55E00", "#0072B2", "#999999", "#56B4E9", "#F0E442", "#009E73", "#CC79A7")
+
+# To use for fills, add
+#  scale_fill_manual(values=cbPalette)
+
+# To use for line and point colors, add
+#  scale_colour_manual(values=cbPalette)
+
+#get the data
+source("PlotSecondaries.R")
+
+#add %err
+out$finterr <- out$f_int_error/out$f_modern
+out$fexterr <- out$f_ext_error/out$f_modern
+out$errrat <- out$merr/abs(out$fmd)
+
+#select data by Fm, size, and date
+out.c <- subset(out, f_modern > .1 & f_modern < 1.6)
+
+#clean out bad data points
+
+out.c <- subset(out.c, sigma < 10 & sigma > -10)
+out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02)
+out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2])
+#out.s <- subset(out.s, tp_date_pressed > as.POSIXct("2013-02-01 EDT"))
+
+
+#Make summary table
+secsum <- ddply(out.s, .(name, system), summarize,
+                fm = mean(f_modern),
+                fm.s = sd(f_modern),
+                nFm = mean(normFm),
+                nFm.s = sd(normFm),
+                sig = mean(sigma),
+                sig.s = sd(sigma),
+                N = length(f_modern))
+
+
+```
+
+Analysis of performance of all secondary standards for `r system` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+
+* Mean Sigma for AMS1 is `r mean(out.s$sigma[out.s$system=="AMS1"])`.
+* Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
+* No correlation to size or date run.
+
+---
+
+Summary table
+----------
+```{r, echo=FALSE, message=FALSE, results='asis'}
+
+require(xtable)
+
+table <- xtable(secsum)
+digits(table) <- 4
+
+print(table, floating=TRUE, type="html")
+```
+
+---
+
+Histograms
+---------
+
+```{r SigmaHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#Sigma histogram
+#p <- qplot(sigma, data=out.s, geom="histogram", xlim=c(-10,10))
+#p + ggtitle(paste("Sigma Histogram, ", system, ", ", from))
+ggplot(out.s, aes(sigma)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Histogram, ", system, ", ", from))
+```
+
+---
+
+Boxplots
+--------
+
+Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD.
+
+```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#sigma boxplots
+p <- ggplot(out.s, aes(name, sigma)) + geom_hline(yintercept=0) + geom_boxplot() + geom_jitter()
+#p <- qplot(name, sigma, data=out.m, geom=c("boxplot", "jitter"))
+p + facet_grid(system ~ .) + ggtitle(paste("Sigma Boxplots, ", system, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+---
+
+Fm vs Sigma
+----------
+
+Sigma varies by Fm. First plot shows a regression through all data, 
+which weights by N of secondaries, and second plot regression is 
+through means of secondaries (whiskers show SD of mean).
+
+```{r SigmavsRatio, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#ratio vs sigma
+p <- qplot(f_modern, sigma, color=system, shape=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + stat_smooth(method="lm", se=FALSE) +
+  ggtitle(paste("Sigma vs Fm, ", system, ", ", from))
+  #scale_colour_manual(values=cbPalette)
+
+p <- qplot(fm, sig, color=system, data=secsum)
+p + geom_hline(yintercept=0) + geom_point() +
+  geom_errorbar(aes(ymin=sig-sig.s, ymax=sig+sig.s), width=.02) + 
+  geom_smooth(method="lm") + 
+  geom_point(size=3) + ggtitle(paste("Sigma vs Fm, ", system, ", ", from)) +
+  scale_colour_manual(values=cbPalette)
+
+```
+
+---
+
+Fm vs Normalized Fm error
+--------------------
+
+Another way of looking at the same. Y-axis is now normalized Fm error ( (Fm - consensus) / consensus ).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+#norm ratio vs ratio
+qplot(f_modern, normFm, color=system, data=out.s) +
+  geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") +
+  ggtitle(paste("NormFm vs Fm, ", system, ", ", from))
+
+ggplot(secsum, aes(x = fm, y = nFm, color=system)) +
+  geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  geom_errorbar(aes(ymin=nFm-nFm.s, ymax=nFm+nFm.s), width=.02) + geom_jitter(size=3) +
+  ggtitle(paste("NormFm vs Fm, ", system, ", ", from))
+```
+
+---
+
+Sample size vs sigma
+-------------------
+
+
+
+```{r SizeHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+ggplot(out.s, aes(gf_co2_qty)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Size Histogram, ", system, ", ", from))
+```
+
+```{r sigmavsco2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+p <- qplot(gf_co2_qty, sigma, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+  ggtitle(paste("Sigma vs umol CO2, ", system, ", ", from))
+
+p <- qplot(gf_co2_qty, normFm, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+  ggtitle(paste("Normfm vs umol CO2, ", system, ", ", from))
+```
+
+---
+
+Date vs Sigma
+-------------
+
+```{r DateHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+ggplot(out.s, aes(tp_date_pressed)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Date Histogram, ", system, ", ", from))
+```
+
+
+
+```{r sigmavsdate,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+p <- qplot(tp_date_pressed, sigma, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date, ", system, ", ", from))
+
+p <- qplot(tp_date_pressed, normFm, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date, ", system, ", ", from))
+
+```
+
+---
+
+System Precision
+------------------
+
+Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
+
+```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+qplot(name,finterr, color=system, data=out.s, geom="boxplot", ylim=c(0,.02), main="Internal precision") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+qplot(name,fexterr, color=system, data=out.s, geom="boxplot", ylim=c(0,.02), main="External precision") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+```{r lm, echo=FALSE}
+#linear regression sigma
+#summary(lm(sig~fm, data=secsum))
+
+#linear regression fm
+#summary(lm(nFm~fm, data=secsum))
+```
+
+
