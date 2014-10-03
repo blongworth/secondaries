@@ -88,3 +88,25 @@ calcSecondary <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosa
   }
 }
 
+#calculate secondary sigmas using standard table results
+calcSecondaryStd <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosams') {
+  
+  #get secondary data and calculate sigmas, checking for NA's
+  m <- getSecondary(rec, from, to, sys)
+  
+  if(dim(m)[1] > 0) {
+    #get consensus value
+    fmc <- as.numeric(subset(standards,rec_num == rec, fm_consensus))
+    #get reported error
+    m$merr <- pmax(m$f_int_err,m$f_ext_err)
+    
+    m <- within(m, sigma <- sigma(f_modern, standards[standards$rec_num == rec, 8], merr, 0))
+    m$fmd <- m$f_modern - fmc
+    m$normFm <- normFm(m$f_modern, fmc)
+    m
+  }
+  else {
+    return()
+  }
+}
+

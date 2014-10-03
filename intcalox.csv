@@ -1,0 +1,6 @@
+rec_num,tiri_id,material,fm_consensus,fm_mean,fm_median,fm_q1,fm_q3,dc14_mean,dc14_median,dc14_q1,dc14_q3,dc13_cons,dc13_n_avg,fm_err,blank,est_poc,top20_flg,name
+34148,,,1.0398,,,,,,,,,,,0,,,,OX-I Solid
+87012,,,1.0398,,,,,,,,,,,0,,,,Ox-I Ost
+53212,,,1.3407,,,,,,,,,,,0,,,,OX-II Jar5
+53213,,,1.3407,,,,,,,,,,,0,,,,OX-II Jar6
+34149,,,1.3407,,,,,,,,,,,0,,,,OX-II

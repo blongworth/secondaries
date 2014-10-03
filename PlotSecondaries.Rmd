@@ -14,10 +14,10 @@ require(ggplot2)
 require(plyr)
 
 #set parameters
-from <- '2014-01-01'
+from <- '2014-08-15'
 to <- 'present' #present or date
-system <- 'usams' #cfams, usams, ams1 or both
-size <- c(0,300)
+system <- 'both' #cfams, usams, ams1 or both
+size <- c(40,300)
 #Setup ggplot palette
 # The palette with grey:
 cbPalette <- c("#E69F00", "#D55E00", "#0072B2", "#999999", "#56B4E9", "#F0E442", "#009E73", "#CC79A7")
@@ -62,9 +62,9 @@ secsum <- ddply(out.s, .(name, system), summarize,
 
 Analysis of performance of all secondary standards for `r system` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
 
-* Mean Sigma for AMS1 is `r mean(out.s$sigma[out.s$system=="AMS1"])`.
+* Mean Sigma for USAMS is `r mean(out.s$sigma[out.s$system=="USAMS"])`.
 * Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
-* No correlation to size or date run.
+
 
 ---
 
@@ -212,6 +212,7 @@ System Precision
 
 Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
 
+Internal vs external error
 ```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
 qplot(name,finterr, color=system, data=out.s, geom="boxplot", ylim=c(0,.02), main="Internal precision") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
