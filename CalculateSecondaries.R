@@ -35,7 +35,7 @@ getSecondary <- function (rec = 87012, from = "2013-02-01", to = "present", sys 
   }
   
   #Open DB connection
-  nosams <- odbcConnect("nosams-prod", uid = "brettl", pwd = "8675309")
+  nosams <- odbcConnect(database, uid = uid, pwd = pwd)
   
   #Do the query
   x <- sqlQuery(nosams, paste("

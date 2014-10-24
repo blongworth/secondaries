@@ -12,9 +12,12 @@ Both Systems
 
 require(ggplot2)
 require(plyr)
+require(RODBC)
+
+source("~/R/dbconfig.R")
 
 #set parameters
-from <- '2014-08-15'
+from <- '2013-06-15'
 to <- 'present' #present or date
 system <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -37,14 +40,12 @@ out$fexterr <- out$f_ext_error/out$f_modern
 out$errrat <- out$merr/abs(out$fmd)
 
 #select data by Fm, size, and date
-out.c <- subset(out, f_modern > .1 & f_modern < 1.6)
+out.c <- subset(out, f_modern > -.10 & f_modern < 1.6)
 
 #clean out bad data points
-
 out.c <- subset(out.c, sigma < 10 & sigma > -10)
 out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02)
 out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2])
-#out.s <- subset(out.s, tp_date_pressed > as.POSIXct("2013-02-01 EDT"))
 
 
 #Make summary table
@@ -105,9 +106,17 @@ Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 
 #sigma boxplots
-p <- ggplot(out.s, aes(name, sigma)) + geom_hline(yintercept=0) + geom_boxplot() + geom_jitter()
-#p <- qplot(name, sigma, data=out.m, geom=c("boxplot", "jitter"))
-p + facet_grid(system ~ .) + ggtitle(paste("Sigma Boxplots, ", system, ", ", from)) +
+p <- ggplot(out.s, aes(name, sigma)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Boxplots, ", system, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+#normfm boxplots
+p <- ggplot(out.s, aes(name, normFm)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Normalized Fm difference Boxplots, ", system, ", ", from)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
@@ -210,15 +219,19 @@ p + geom_hline(yintercept=0) + geom_point() + geom_smooth() +
 System Precision
 ------------------
 
-Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
+Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. Ext/Int Precision Ratio looks at whether error is dominated by repeatability or counting statistics. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
 
-Internal vs external error
+
+
 ```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+
 qplot(name,finterr, color=system, data=out.s, geom="boxplot", ylim=c(0,.02), main="Internal precision") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 qplot(name,fexterr, color=system, data=out.s, geom="boxplot", ylim=c(0,.02), main="External precision") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
+qplot(name,fexterr/finterr, color=system, data=out.s, geom="boxplot", main="Ext/Int Precision Ratio") +
+  geom_hline(yintercept=1) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 ```{r lm, echo=FALSE}

@@ -21,7 +21,7 @@ source("CalculateSecondaries.R")
 ####
 
 #Open DB connection
-nosams <- odbcConnect("nosams-prod", uid = "brettl", pwd = "8675309")
+nosams <- odbcConnect(database, uid = uid, pwd = pwd)
 
 #get intcal table
 intcal <- sqlFetch(nosams, "intercal_samples")
