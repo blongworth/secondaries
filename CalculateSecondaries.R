@@ -1,22 +1,24 @@
-#'This script reads secondary data and consensus values
-#'from the NOSAMS db and produces a series of plots. It
-#'can be used to select data for a given system and time
-#'period. 
-
-# #Run Parameters
-# from <- '2012-01-01'
-# to <- 'present' #present or date
-# system <- 'cfams' #cfams or ams1
-
+#Functions for secondary standard analysis
 
 ####
 #Define functions
 ####
 
+
+#Calculate Sigma
+sigma <- function(fmm,fmc,em,ec) {
+  (fmm - fmc) /sqrt(em^2 + ec^2)
+}
+
+
+#Calculate normalized fm
+normFm <- function (fmm, fmc) {
+  (fmm - fmc) / fmc
+}
+
+
 #Get secondary from database
-getSecondary <- function (rec = 87012, from = "2013-02-01", to = "present", sys = "ams1") {
-  
-  require(RODBC) 
+getSecondary <- function (rec, from, to, sys, db) { 
   
   if (sys == "cfams") {
     whid <- "AND wheel_id LIKE 'C%'"
@@ -34,11 +36,8 @@ getSecondary <- function (rec = 87012, from = "2013-02-01", to = "present", sys 
     ts <- ""
   }
   
-  #Open DB connection
-  nosams <- odbcConnect(database, uid = uid, pwd = pwd)
-  
   #Do the query
-  x <- sqlQuery(nosams, paste("
+  sqlQuery(db, paste("
         SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, wheel_pos.wheel_id, 
           target.tp_date_pressed, graphite_lab.lab_name, no_os.f_modern, 
           no_os.f_int_error, no_os.f_ext_error, graphite.gf_co2_qty
@@ -46,39 +45,26 @@ getSecondary <- function (rec = 87012, from = "2013-02-01", to = "present", sys 
         WHERE target.tp_num = no_os.tp_num AND target.tp_num = wheel_pos.tp_num 
           AND graphite.osg_num = target.osg_num 
           AND target.graphite_lab = graphite_lab.lab_id
-  	      AND target.rec_num =", rec," 
+          AND target.rec_num =", rec," 
           ",whid, "
 		      AND target.tp_date_pressed > '",from,"'
             ", ts, "
           "))
   
-  #Close DB connection
-  odbcClose(nosams)
-  
-  x
 }
 
-#Calculate Sigma
-sigma <- function(fmm,fmc,em,ec) {
-  (fmm - fmc) /sqrt(em^2 + ec^2)
-}
-
-#Calculate normalized fm
-normFm <- function (fmm, fmc) {
-  (fmm - fmc) / fmc
-}
 
 #calculate secondary sigmas using intcal results
-calcSecondary <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosams') {
+calcSecondary <- function (rec, from, to, sys, intcal, db) {
   
   #get secondary data and calculate sigmas, checking for NA's
-  m <- getSecondary(rec, from, to, sys)
+  m <- getSecondary(rec, from, to, sys, db)
   
   if(dim(m)[1] > 0) {
     fmc <- as.numeric(subset(intcal,rec_num == rec, fm_consensus))
     m$merr <- pmax(m$f_int_err,m$f_ext_err)
     m<- within(m, sigma <- sigma(f_modern, intcal[intcal$rec_num == rec, 4], merr, 
-        intcal[intcal$rec_num == rec, 15]))
+                                 intcal[intcal$rec_num == rec, 15]))
     m$fmd <- m$f_modern - fmc
     m$normFm <- normFm(m$f_modern, fmc)
     m
@@ -88,25 +74,42 @@ calcSecondary <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosa
   }
 }
 
-#calculate secondary sigmas using standard table results
-calcSecondaryStd <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosams') {
+
+#Main function for getting secondaries
+calcSecondaries <- function (from, to, sys, intcal, db) {
   
-  #get secondary data and calculate sigmas, checking for NA's
-  m <- getSecondary(rec, from, to, sys)
-  
-  if(dim(m)[1] > 0) {
-    #get consensus value
-    fmc <- as.numeric(subset(standards,rec_num == rec, fm_consensus))
-    #get reported error
-    m$merr <- pmax(m$f_int_err,m$f_ext_err)
+  #Create data frame of all secondaries with sigmas
+  out <- lapply(X = as.list(intcal$rec_num), FUN = calcSecondary, from, to, sys, intcal, db)
+  out <- do.call("rbind", out)
     
-    m <- within(m, sigma <- sigma(f_modern, standards[standards$rec_num == rec, 8], merr, 0))
-    m$fmd <- m$f_modern - fmc
-    m$normFm <- normFm(m$f_modern, fmc)
-    m
-  }
-  else {
-    return()
-  }
+  #clean it up
+  out$system[grepl("CFAMS", out$wheel_id)] <- "CFAMS"
+  out$system[grepl("USAMS", out$wheel_id)] <- "USAMS"
+  out$system[is.na(out$system)] <- "AMS1"
+  merge (out,intcal[, c("rec_num", "name", "fm_consensus")], by= "rec_num")
+    
 }
+
+
+# #calculate secondary sigmas using standard table results
+# calcSecondaryStd <- function (rec, from = '2013-02-01', to = 'present', sys = 'nosams', db) {
+#   
+#   #get secondary data and calculate sigmas, checking for NA's
+#   m <- getSecondary(rec, from, to, sys, db)
+#   
+#   if(dim(m)[1] > 0) {
+#     #get consensus value
+#     fmc <- as.numeric(subset(standards,rec_num == rec, fm_consensus))
+#     #get reported error
+#     m$merr <- pmax(m$f_int_err,m$f_ext_err)
+#     
+#     m <- within(m, sigma <- sigma(f_modern, standards[standards$rec_num == rec, 8], merr, 0))
+#     m$fmd <- m$f_modern - fmc
+#     m$normFm <- normFm(m$f_modern, fmc)
+#     m
+#   }
+#   else {
+#     return()
+#   }
+# }
 
