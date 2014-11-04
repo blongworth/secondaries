@@ -50,5 +50,5 @@ out <- do.call("rbind", out)
 out$system[grepl("CFAMS", out$wheel_id)] <- "CFAMS"
 out$system[grepl("USAMS", out$wheel_id)] <- "USAMS"
 out$system[is.na(out$system)] <- "AMS1"
-out <- merge (out,intcal[, c("rec_num", "name")], by= "rec_num")
+out <- merge (out,intcal[, c("rec_num", "name", "fm_consensus")], by= "rec_num")
 

@@ -17,9 +17,9 @@ require(RODBC)
 source("~/R/dbconfig.R")
 
 #set parameters
-from <- '2013-06-15'
+from <- '2014-08-15'
 to <- 'present' #present or date
-system <- 'both' #cfams, usams, ams1 or both
+system <- 'USAMS' #cfams, usams, ams1 or both
 size <- c(40,300)
 #Setup ggplot palette
 # The palette with grey:
@@ -50,6 +50,7 @@ out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2])
 
 #Make summary table
 secsum <- ddply(out.s, .(name, system), summarize,
+                fm.e = mean(fm_consensus),
                 fm = mean(f_modern),
                 fm.s = sd(f_modern),
                 nFm = mean(normFm),
@@ -101,7 +102,11 @@ ggplot(out.s, aes(sigma)) + geom_histogram() +
 Boxplots
 --------
 
-Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD.
+Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. Normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $\Fm_{m}$ is measured Fm and $\Fm_{c}$ is consensus Fm.
 
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 
