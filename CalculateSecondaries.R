@@ -38,9 +38,10 @@ getSecondary <- function (rec, from, to, sys, db) {
   
   #Do the query
   sqlQuery(db, paste("
-        SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, wheel_pos.wheel_id, 
-          target.tp_date_pressed, graphite_lab.lab_name, no_os.f_modern, 
-          no_os.f_int_error, no_os.f_ext_error, graphite.gf_co2_qty
+        SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, 
+          wheel_pos.wheel_id, target.tp_date_pressed, graphite_lab.lab_name, 
+          no_os.f_modern, no_os.f_int_error, no_os.f_ext_error, 
+          graphite.gf_co2_qty, no_os.q_flag
         FROM no_os, target, wheel_pos, graphite, graphite_lab
         WHERE target.tp_num = no_os.tp_num AND target.tp_num = wheel_pos.tp_num 
           AND graphite.osg_num = target.osg_num 

@@ -64,6 +64,7 @@ out$errrat <- out$merr/abs(out$fmd)
 out.c <- subset(out, f_modern > -.10 & f_modern < 1.6)
 
 #clean out bad data points
+out.c <- subset(out.c, is.na(q_flag))
 out.c <- subset(out.c, sigma < 10 & sigma > -10)
 out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02)
 out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2])
