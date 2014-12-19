@@ -17,9 +17,12 @@ normFm <- function (fmm, fmc) {
 }
 
 
-#Get secondary from database
+
 getSecondary <- function (rec, from, to, sys, db) { 
+  #Get data for a secondary from database
+  #Return query result as data table
   
+  #What system do we want data for?
   if (sys == "cfams") {
     whid <- "AND wheel_id LIKE 'C%'"
   } else if (sys =="usams") {
@@ -30,6 +33,7 @@ getSecondary <- function (rec, from, to, sys, db) {
     whid <- "AND wheel_id NOT LIKE 'C%'"
   }
   
+  #Data to present or provided end date
   if (to != "present") {
     ts <- paste("AND target.tp_date_pressed < '", to,"' ")
   } else {
@@ -55,8 +59,10 @@ getSecondary <- function (rec, from, to, sys, db) {
 }
 
 
-#calculate secondary sigmas using intcal results
+
 calcSecondary <- function (rec, from, to, sys, intcal, db) {
+  #Get data for a secondary standard and calculate fmdiff and
+  #sigma  using intcal results
   
   #get secondary data and calculate sigmas, checking for NA's
   m <- getSecondary(rec, from, to, sys, db)
@@ -78,6 +84,9 @@ calcSecondary <- function (rec, from, to, sys, intcal, db) {
 
 #Main function for getting secondaries
 calcSecondaries <- function (from, to, sys, intcal, db) {
+  #For all secondary standard rec_nums in a dataframe,
+  #Get secondary data from database and calculate fmdiff
+  #and sigma
   
   #Create data frame of all secondaries with sigmas
   out <- lapply(X = as.list(intcal$rec_num), FUN = calcSecondary, from, to, sys, intcal, db)
