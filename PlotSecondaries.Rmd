@@ -16,6 +16,7 @@ require(dplyr)
 require(knitr)
 require(RODBC)
 
+
 #Load files
 source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
@@ -23,8 +24,11 @@ source("CalculateSecondaries.R") #Functions
 #set parameters
 from <- '2014-08-15'
 to <- 'present' #present or date
-sys <- 'usams' #cfams, usams, ams1 or both
+sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
+
+#Set digits for output
+options(digits=4)
 
 #Open DB connection
 db <- odbcConnect(database, uid = uid, pwd = pwd)
@@ -58,10 +62,11 @@ odbcClose(db)
 #add %err
 out$finterr <- out$f_int_error/out$f_modern
 out$fexterr <- out$f_ext_error/out$f_modern
+out$fmaxerr <- out$merr/out$f_modern
 out$errrat <- out$merr/abs(out$fmd)
 
 #select data by Fm, size, and date
-out.c <- subset(out, f_modern > -.10 & f_modern < 1.6)
+out.c <- subset(out, f_modern > .1 & f_modern < 1.6)
 
 #clean out bad data points
 out.c <- subset(out.c, is.na(q_flag)) #Check for q_flag
@@ -70,10 +75,16 @@ out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02) #Select reasonable Fm
 out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2]) #Select size range
 ```
 
-Analysis of performance of all secondary standards for `r system` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
 
 * Mean Sigma for USAMS is `r mean(out.s$sigma[out.s$system=="USAMS"])`.
 * Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
+
+Normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 
 
 # Summary table
@@ -88,14 +99,11 @@ syssum <- ddply(out.s, .(system), summarize,
                 nFm.s = sd(normFm),
                 sig = mean(sigma),
                 sig.s = sd(sigma),
+                ferr = mean(fmaxerr),
                 N = length(f_modern))
 
-syssum
+knitr::kable(syssum, digits = 4, caption = "Summary data for secondaries")
 
-require(xtable)
-
-table <- xtable(secsum)
-digits(table) <- 4
 
 #print(table, floating=TRUE, type="html")
 ```
@@ -115,12 +123,14 @@ secsum <- ddply(out.s, .(name, system), summarize,
                 sig.s = sd(sigma),
                 N = length(f_modern))
 
-require(xtable)
 
-table <- xtable(secsum)
-digits(table) <- 4
-
-print(table, floating=TRUE, type="html")
+knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
+# require(xtable)
+# 
+# table <- xtable(secsum)
+# digits(table) <- 4
+# 
+# print(table, floating=TRUE, type="html")
 ```
 
 
@@ -130,21 +140,16 @@ print(table, floating=TRUE, type="html")
 
 #Sigma histogram
 #p <- qplot(sigma, data=out.s, geom="histogram", xlim=c(-10,10))
-#p + ggtitle(paste("Sigma Histogram, ", system, ", ", from))
+#p + ggtitle(paste("Sigma Histogram, ", sys, ", ", from))
 ggplot(out.s, aes(sigma)) + geom_histogram() + 
   facet_grid(system ~ .) + 
-  ggtitle(paste("Sigma Histogram, ", system, ", ", from))
+  ggtitle(paste("Sigma Histogram, ", sys, ", ", from))
 ```
 
 
 # Boxplots
 
-Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. Normalized fm difference is defined as:
-
-$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
-
-where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
-
+Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
 
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 
@@ -152,14 +157,14 @@ where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 p <- ggplot(out.s, aes(name, sigma)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
-  ggtitle(paste("Sigma Boxplots, ", system, ", ", from)) +
+  ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
 #normfm boxplots
 p <- ggplot(out.s, aes(name, normFm)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
-  ggtitle(paste("Normalized Fm difference Boxplots, ", system, ", ", from)) +
+  ggtitle(paste("Normalized Fm difference Boxplots, ", sys, ", ", from)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
@@ -182,28 +187,6 @@ p + ggtitle(paste("Normalized Fm difference Boxplots for all secondaries by syst
 ```
 
 
-## Selected secondaries
-
-```{r, SelectedBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
-
-#Pick secondaries
-s = filter(out.s, name %in% c("IAEA C-2", "TIRI I", "FIRI G", "IAEA C-6", "OX-I Solid", "OX-II"))
-
-#normfm boxplots
-p <- ggplot(s, aes(name, normFm)) + geom_hline(yintercept=0) + 
-  geom_boxplot() + geom_jitter()
-p + facet_grid(system ~ .) + 
-  ggtitle(paste("Normalized Fm difference Boxplots")) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-
-#normfm boxplots
-p <- ggplot(s, aes(name, normFm)) + geom_hline(yintercept=0) + 
-  geom_boxplot(aes(fill = factor(system)))#+ geom_jitter(aes(fill = factor(system))
-p  + ggtitle(paste("Normalized Fm difference Boxplots")) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-```
-
-
 # Fm vs Sigma
 
 Sigma varies by Fm. First plot shows a regression through all data, 
@@ -215,15 +198,15 @@ through means of secondaries (whiskers show SD of mean).
 #ratio vs sigma
 p <- qplot(f_modern, sigma, color=system, shape=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + stat_smooth(method="lm", se=FALSE) +
-  ggtitle(paste("Sigma vs Fm, ", system, ", ", from))
+  ggtitle(paste("Sigma vs Fm, ", sys, ", ", from))
   #scale_colour_manual(values=cbPalette)
 
 p <- qplot(fm, sig, color=system, data=secsum)
 p + geom_hline(yintercept=0) + geom_point() +
   geom_errorbar(aes(ymin=sig-sig.s, ymax=sig+sig.s), width=.02) + 
   geom_smooth(method="lm") + 
-  geom_point(size=3) + ggtitle(paste("Sigma vs Fm, ", system, ", ", from)) +
-  scale_colour_manual(values=cbPalette)
+  geom_point(size=3) + ggtitle(paste("Sigma vs Fm, ", sys, ", ", from)) 
+  #scale_colour_manual(values=cbPalette)
 
 ```
 
@@ -236,12 +219,12 @@ Another way of looking at the same. Y-axis is now normalized Fm error ( (Fm - co
 #norm ratio vs ratio
 qplot(f_modern, normFm, color=system, data=out.s) +
   geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") +
-  ggtitle(paste("NormFm vs Fm, ", system, ", ", from))
+  ggtitle(paste("NormFm vs Fm, ", sys, ", ", from))
 
 ggplot(secsum, aes(x = fm, y = nFm, color=system)) +
   geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
   geom_errorbar(aes(ymin=nFm-nFm.s, ymax=nFm+nFm.s), width=.02) + geom_jitter(size=3) +
-  ggtitle(paste("NormFm vs Fm, ", system, ", ", from))
+  ggtitle(paste("NormFm vs Fm, ", sys, ", ", from))
 ```
 
 
@@ -252,17 +235,17 @@ ggplot(secsum, aes(x = fm, y = nFm, color=system)) +
 
 ggplot(out.s, aes(gf_co2_qty)) + geom_histogram() + 
   facet_grid(system ~ .) + 
-  ggtitle(paste("Size Histogram, ", system, ", ", from))
+  ggtitle(paste("Size Histogram, ", sys, ", ", from))
 ```
 
 ```{r sigmavsco2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 p <- qplot(gf_co2_qty, sigma, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
-  ggtitle(paste("Sigma vs umol CO2, ", system, ", ", from))
+  ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
 
 p <- qplot(gf_co2_qty, normFm, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
-  ggtitle(paste("Normfm vs umol CO2, ", system, ", ", from))
+  ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
 ```
 
 
@@ -272,53 +255,21 @@ p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") +
 
 ggplot(out.s, aes(tp_date_pressed)) + geom_histogram() + 
   facet_grid(system ~ .) + 
-  ggtitle(paste("Date Histogram, ", system, ", ", from))
+  ggtitle(paste("Date Histogram, ", sys, ", ", from))
 ```
 
 ```{r sigmavsdate,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 p <- qplot(tp_date_pressed, sigma, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
-  ggtitle(paste("Sigma vs date, ", system, ", ", from))
+  ggtitle(paste("Sigma vs date, ", sys, ", ", from))
 
 p <- qplot(tp_date_pressed, normFm, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
-  ggtitle(paste("Normfm vs date, ", system, ", ", from))
+  ggtitle(paste("Normfm vs date, ", sys, ", ", from))
 ```
 
 
-# Individual Secondaries
-
-Plot individual secondaries
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
-#norm ratio vs ratio
-
-
-plotSec <- function(sec, data, sys) {
-  
-  z = filter(data, name == sec, system == sys)
-  m = mean(z$f_modern)
-  sd = sd(z$f_modern)
-  cons = z$fm_consensus[1]
-  
-  qplot(tp_date_pressed, f_modern, data = z) +
-    geom_hline(yintercept = cons, color = "blue") +
-    geom_hline(yintercept = m) +
-    geom_hline(yintercept = m + sd, color = "gray") +
-    geom_hline(yintercept = m - sd, color = "gray") +
-    geom_point() +
-    geom_errorbar(aes(ymin=f_modern-f_int_error, ymax=f_modern+f_ext_error)) +
-    theme_bw()
-}  
-
-plotSec("IAEA C-2", out.s, "USAMS")
-plotSec("OX-II", out.s, "USAMS")
-#plotSec("IAEA C-2", out.s, "CFAMS")
-
-```
-
-
-#System Precision
+# System Precision
 
 Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. Ext/Int Precision Ratio looks at whether error is dominated by repeatability or counting statistics. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
 
