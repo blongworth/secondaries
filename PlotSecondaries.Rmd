@@ -38,7 +38,12 @@ db <- odbcConnect(database, uid = uid, pwd = pwd)
 ###
 
 #get intcal table
-intcal <- sqlFetch(db, "intercal_samples")
+
+#this doesn't work on Linux. No idea why...
+#intcal <- sqlFetch(db, "intercal_samples")
+
+#This does...
+intcal <- sqlQuery(db, paste("select * from ", "intercal_samples"))
 
 #create factor of tiri_id, order by Fm
 intcal <- within(intcal, name <- factor(tiri_id, levels = unique(tiri_id[order(fm_consensus, tiri_id)]),ordered = TRUE))
