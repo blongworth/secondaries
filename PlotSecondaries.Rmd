@@ -22,7 +22,7 @@ source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
 #set parameters
-from <- '2014-08-15'
+from <- '2014-09-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
