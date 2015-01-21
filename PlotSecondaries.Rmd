@@ -126,6 +126,7 @@ secsum <- ddply(out.s, .(name, system), summarize,
                 nFm.s = sd(normFm),
                 sig = mean(sigma),
                 sig.s = sd(sigma),
+                ferr = mean(fmaxerr),
                 N = length(f_modern))
 
 
