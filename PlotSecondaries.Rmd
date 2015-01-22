@@ -53,7 +53,9 @@ intcal$fm_consensus[intcal$rec_num == 1086] <- 1.5016
 
 #add in OX-I, OX-II
 ox <- read.csv("intcalox.csv")
+ox <- filter(ox, rec_num != 113385) #but don't use normalizing ox-I
 intcal <- rbind(intcal, ox)
+
 
 ###
 #get secondary data
