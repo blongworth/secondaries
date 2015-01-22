@@ -90,7 +90,7 @@ secsum <- ddply(out.s, .(name, system), summarize,
                 fm.s = sd(f_modern),
                 sig = mean(sigma),
                 sig.s = sd(sigma),
-                ferr = mean(fmaxerr),
+                merr.m = mean(merr),
                 N = length(f_modern))
 
 
@@ -104,7 +104,7 @@ monthsum <- ddply(out.s, .(month, system), summarize,
                 fm.s = sd(f_modern),
                 sig = mean(sigma),
                 sig.s = sd(sigma),
-                ferr = mean(fmaxerr),
+                merr.m = mean(merr),
                 N = length(f_modern))
 
 knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
@@ -121,17 +121,17 @@ ggplot(data=monthsum, aes(x=month, y=fm.s, fill=system)) +
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
   ggtitle("SD of OX-I by month")
 
-ggplot(data=monthsum, aes(x=month, y=ferr, fill=system)) + 
+ggplot(data=monthsum, aes(x=month, y=merr.m, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") +
-  coord_cartesian(ylim = c(0.002, 0.0026)) +
+  coord_cartesian(ylim = c(0.002, 0.0027)) +
   ggtitle("reported error of OX-I by month")
 
-ggplot(data=out.s, aes(x=month, y=fexterr/finterr, fill=system)) + 
+ggplot(data=out.s, aes(x=month, y=f_ext_error/f_int_error, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
   coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month")
 
-ggplot(data=out.s, aes(x=month, y=fexterr, fill=system)) + 
+ggplot(data=out.s, aes(x=month, y=f_ext_error, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
 #  coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month")
