@@ -98,7 +98,7 @@ knitr::kable(secsum, digits = 4, caption = "Summary data for all primaries")
 
 #Make summary table
 out.s$month <- ordered(months(out.s$tp_date_pressed), c("September","October","November","December","January"))
-monthsum <- ddply(out.s, .(month, system), summarize,
+monthsum <- ddply(out.s, .(system, month), summarize,
                 fm.e = mean(fm_consensus),
                 fm = mean(f_modern),
                 fm.s = sd(f_modern),
@@ -108,6 +108,8 @@ monthsum <- ddply(out.s, .(month, system), summarize,
                 N = length(f_modern))
 
 knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
+
+
 ```
 
 # Plots of primary error by month
@@ -136,5 +138,8 @@ ggplot(data=out.s, aes(x=month, y=f_ext_error, fill=system)) +
 #  coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month")
 
+p <- qplot(tp_date_pressed, f_modern, color=system, data=out.s)
+p + geom_hline(yintercept=1.0398) + geom_point() + geom_smooth(method=span=1) + 
+  ggtitle(paste("Mean fm error vs date, ", sys, ", ", from))
 ```
 
