@@ -46,7 +46,8 @@ db <- odbcConnect(database, uid = uid, pwd = pwd)
 intcal <- sqlQuery(db, paste("select * from ", "intercal_samples"))
 
 #create factor of tiri_id, order by Fm
-intcal <- within(intcal, name <- factor(tiri_id, levels = unique(tiri_id[order(fm_consensus, tiri_id)]),ordered = TRUE))
+intcal <- within(intcal, name <- factor(tiri_id, levels = unique(
+  tiri_id[order(fm_consensus, tiri_id)]),ordered = TRUE))
 
 #Replace C-6 with new consensus from Xiaomei 2010
 intcal$fm_consensus[intcal$rec_num == 1086] <- 1.5016
@@ -124,11 +125,14 @@ secsum <- ddply(out.s, .(name, system), summarize,
                 fm.e = mean(fm_consensus),
                 fm = mean(f_modern),
                 fm.s = sd(f_modern),
+                err = mean(merr),
+                intrerr = intrErr(sd(f_modern), mean(merr)),
                 nFm = mean(normFm),
                 nFm.s = sd(normFm),
                 sig = mean(sigma),
                 sig.s = sd(sigma),
                 ferr = mean(fmaxerr),
+                fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
                 N = length(f_modern))
 
 
