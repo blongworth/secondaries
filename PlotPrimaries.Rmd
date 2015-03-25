@@ -1,3 +1,6 @@
+---
+output: html_document
+---
 Primary standard analysis
 ========================================================
 
@@ -97,7 +100,7 @@ secsum <- ddply(out.s, .(name, system), summarize,
 knitr::kable(secsum, digits = 4, caption = "Summary data for all primaries")
 
 #Make summary table
-out.s$month <- ordered(months(out.s$tp_date_pressed), c("September","October","November","December","January"))
+out.s$month <- ordered(months(out.s$tp_date_pressed), c("September","October","November","December","January", "February", "March"))
 monthsum <- ddply(out.s, .(system, month), summarize,
                 fm.e = mean(fm_consensus),
                 fm = mean(f_modern),
@@ -125,7 +128,7 @@ ggplot(data=monthsum, aes(x=month, y=fm.s, fill=system)) +
 
 ggplot(data=monthsum, aes(x=month, y=merr.m, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") +
-  coord_cartesian(ylim = c(0.002, 0.0027)) +
+  coord_cartesian(ylim = c(0.002, 0.004)) +
   ggtitle("reported error of OX-I by month")
 
 ggplot(data=out.s, aes(x=month, y=f_ext_error/f_int_error, fill=system)) + 
@@ -139,7 +142,7 @@ ggplot(data=out.s, aes(x=month, y=f_ext_error, fill=system)) +
   ggtitle("Error ratio by month")
 
 p <- qplot(tp_date_pressed, f_modern, color=system, data=out.s)
-p + geom_hline(yintercept=1.0398) + geom_point() + geom_smooth(method=span=1) + 
+p + geom_hline(yintercept=1.0398) + geom_point() + geom_smooth(span=1) + 
   ggtitle(paste("Mean fm error vs date, ", sys, ", ", from))
 ```
 
