@@ -16,6 +16,16 @@ normFm <- function (fmm, fmc) {
   (fmm - fmc) / fmc
 }
 
+#calculate intrinsic error
+intrErr <- function(totErr, targErr) {
+  ifelse (totErr < targErr, NA, sqrt(totErr^2 - targErr^2))
+}
+
+#Calculate total error
+totErr <- function(targErr, intrErr) {
+  sqrt(targErr^2 + intrErr^2)
+}
+
 
 
 getSecondary <- function (rec, from, to, sys, db) { 
@@ -41,7 +51,7 @@ getSecondary <- function (rec, from, to, sys, db) {
   }
   
   #Do the query
-  sqlQuery(db, paste("
+  f <- sqlQuery(db, paste("
         SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, 
           wheel_pos.wheel_id, target.tp_date_pressed, graphite_lab.lab_name, 
           no_os.f_modern, no_os.f_int_error, no_os.f_ext_error, 
@@ -53,12 +63,60 @@ getSecondary <- function (rec, from, to, sys, db) {
           AND target.rec_num =", rec," 
           ",whid, "
 		      AND target.tp_date_pressed > '",from,"'
+          ", ts, "
+        "))
+  
+  cur <- sqlQuery(db, paste("
+        SELECT snics_raw.tp_num, AVG(he12c) AS he12c
+        FROM snics_raw, target
+        WHERE target.tp_num = snics_raw.tp_num
+          AND target.rec_num =", rec," 
+          ",whid, "
+  	      AND target.tp_date_pressed > '",from,"'
+          ", ts, "
+          GROUP BY snics_raw.tp_num
+        "))
+  
+  left_join(f, cur, by = "tp_num")
+  
+}
+
+getSecondaryQC <- function (rec, from, to, sys, db) { 
+  #Get data for a secondary from database
+  #Return query result as data table
+  
+  #What system do we want data for?
+  if (sys == "cfams") {
+    whid <- "AND wheel LIKE 'C%'"
+  } else if (sys =="usams") {
+    whid <- "AND wheel LIKE 'U%'"
+  } else if (sys =="both") {
+    whid <- "" 
+  } else {
+    whid <- "AND wheel NOT LIKE 'C%'"
+  }
+  
+  #Data to present or provided end date
+  if (to != "present") {
+    ts <- paste("AND target_time < '", to,"' ")
+  } else {
+    ts <- ""
+  }
+  
+  #Do the query
+  sqlQuery(db, paste("
+        SELECT rec_num, tp_num, num, target_name, 
+          wheel, target_time, lab, 
+          f_modern, f_int_error, f_ext_error, 
+          gf_co2_qty, q_flag
+        FROM qc
+        WHERE rec_num =", rec," 
+          ",whid, "
+  	      AND target_time > '",from,"'
             ", ts, "
           "))
   
 }
-
-
 
 calcSecondary <- function (rec, from, to, sys, intcal, db) {
   #Get data for a secondary standard and calculate fmdiff and

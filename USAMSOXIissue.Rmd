@@ -1,0 +1,198 @@
+---
+title: "USAMS primary issues"
+output: pdf_document
+---
+Primary standard analysis
+========================================================
+
+`r as.character(format(Sys.Date(), format="%B %d, %Y"))`
+
+
+
+
+
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Load Libraries
+require(ggplot2)
+require(plyr)
+require(dplyr)
+require(knitr)
+require(RODBC)
+
+
+#Load files
+source("~/R/dbconfig.R") #DB connection info
+source("CalculateSecondaries.R") #Functions
+
+#set parameters
+from <- '2014-09-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
+size <- c(100,300)
+
+#Set digits for output
+options(digits=5)
+
+#Open DB connection
+db <- odbcConnect(database, uid = uid, pwd = pwd)
+
+###
+#Make intcal table
+###
+
+#add in OX-I, OX-II
+ox <- read.csv("intcalox.csv")
+intcal <- filter(ox, rec_num == 113385) 
+
+
+
+###
+#get secondary data
+###
+
+out <- calcSecondaries(from, to, sys, intcal, db)
+
+#Close DB
+odbcClose(db)
+
+#add %err
+out$finterr <- out$f_int_error/out$f_modern
+out$fexterr <- out$f_ext_error/out$f_modern
+out$fmaxerr <- out$merr/out$f_modern
+out$errrat <- out$merr/abs(out$fmd)
+
+
+#clean out bad data points
+out.c <- subset(out, is.na(q_flag)) #Check for q_flag
+out.c <- subset(out.c, sigma < 10 & sigma > -10) #Select reasonable sigmas
+out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02) #Select reasonable Fm
+out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2]) #Select size range
+```
+
+Analysis of performance of primary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02).
+
+* Mean Sigma for USAMS is `r mean(out.s$sigma[out.s$system=="USAMS"])`.
+* Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
+
+Normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
+
+
+# Summary table
+
+
+```{r, echo=FALSE, message=FALSE, results='asis'}
+
+#Make summary table
+secsum <- ddply(out.s, .(name, system), summarize,
+                fm.e = mean(fm_consensus),
+                fm = mean(f_modern),
+                fm.s = sd(f_modern),
+                sig = mean(sigma),
+                sig.s = sd(sigma),
+                merr.m = mean(merr),
+                N = length(f_modern))
+
+
+knitr::kable(secsum, digits = 4, caption = "Summary data for all primaries")
+
+#Make summary table
+out.s$month <- ordered(months(out.s$tp_date_pressed), c("September","October","November","December","January"))
+monthsum <- ddply(out.s, .(system, month), summarize,
+                fm.e = mean(fm_consensus),
+                fm = mean(f_modern),
+                fm.s = sd(f_modern),
+                sig = mean(sigma),
+                sig.s = sd(sigma),
+                merr.m = mean(merr),
+                N = length(f_modern))
+
+knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
+
+
+```
+
+# Plots of primary error by month
+
+Looks like CFAMS is getting better while USAMS gets progressively worse. No idea why. Any difference in picking standards? Any chance one system gets the first "scoop" and the other gets the second? More likely the answer is drifting tunes on both systems.
+
+I think the downward jump in reported error (second plot) is when CFAMS increased it's number of runs/target to 10 to match USAMS. The final 2 plots show ratio of external to internal error and external error. Interestingly, the increased number of runs decreased external error while not doing much to internal error... Does this make sense?
+
+``` {r plots}
+ggplot(data=monthsum, aes(x=month, y=fm.s, fill=system)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+  ggtitle("SD of OX-I by month")
+
+ggplot(data=monthsum, aes(x=month, y=merr.m, fill=system)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") +
+  coord_cartesian(ylim = c(0.002, 0.0027)) +
+  ggtitle("reported error of OX-I by month")
+
+```
+
+# Nitty Gritty
+
+## Prep
+
+Does the oxI problem have anything to do with when Liz left?
+
+```{r prep}
+befl <- filter(out.s, as.Date(tp_date_pressed) > as.Date('2014-12-01'), as.Date(tp_date_pressed) < as.Date('2015-01-02'))
+befl$tank <- "before"
+aft <- filter(out.s, as.Date(tp_date_pressed) > as.Date('2014-01-02'))
+aft$tank <- "after"
+tt <- rbind(befl, aft)
+tt$tank <- ordered(tt$tank, c("before", "after"))
+secsum <- ddply(tt, .(tank, system), summarize,
+                fm.e = mean(fm_consensus),
+                fm = mean(f_modern),
+                fm.s = sd(f_modern),
+                sig = mean(sigma),
+                sig.s = sd(sigma),
+                merr.m = mean(merr),
+                N = length(f_modern))
+
+ggplot(data=secsum, aes(x=system, y=fm.s, fill=tank)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+  ggtitle("SD of OX-I bef/after Liz")
+
+ggplot(data=secsum, aes(x=system, y=merr.m, fill=tank)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+  ggtitle("err of OX-I bef/after Liz")
+
+```
+
+## Machine
+
+Is it something about the tank opening?
+
+```{r machine}
+befl <- filter(out.s, as.Date(tp_date_pressed) > as.Date('2014-11-15'), as.Date(tp_date_pressed) < as.Date('2014-12-15'))
+befl$tank <- "before"
+aft <- filter(out.s, as.Date(tp_date_pressed) > as.Date('2014-12-24'))
+aft$tank <- "after"
+tt <- rbind(befl, aft)
+tt$tank <- ordered(tt$tank, c("before", "after"))
+secsum <- ddply(tt, .(tank, system), summarize,
+                fm.e = mean(fm_consensus),
+                fm = mean(f_modern),
+                fm.s = sd(f_modern),
+                sig = mean(sigma),
+                sig.s = sd(sigma),
+                merr.m = mean(merr),
+                N = length(f_modern))
+
+ggplot(data=secsum, aes(x=system, y=fm.s, fill=tank)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+  ggtitle("SD of OX-I bef/after tank")
+
+ggplot(data=secsum, aes(x=system, y=merr.m, fill=tank)) + 
+  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+  ggtitle("err of OX-I bef/after tank")
+```
+
+
