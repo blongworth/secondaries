@@ -94,6 +94,7 @@ secsum <- ddply(out.s, .(name, system), summarize,
                 sig = mean(sigma),
                 sig.s = sd(sigma),
                 merr.m = mean(merr),
+                intrerr = intrErr(sd(f_modern), mean(merr)),
                 N = length(f_modern))
 
 
@@ -108,6 +109,7 @@ monthsum <- ddply(out.s, .(system, month), summarize,
                 sig = mean(sigma),
                 sig.s = sd(sigma),
                 merr.m = mean(merr),
+                intrerr = intrErr(sd(f_modern), mean(merr)),
                 N = length(f_modern))
 
 knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
