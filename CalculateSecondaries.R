@@ -158,17 +158,9 @@ calcSecondaries <- function (from, to, sys, intcal, db) {
     
 }
 
+#Get QC data from database as data frame
 getQCData <- function (from, to, sys) {
-  
-  #getQCData
-  #Get QC data from database as data frame
-  
-  #Load Libraries
-  library(c(RODBC, dplyr))
-  
-  #Load files
-  source("~/R/dbconfig.R") #DB connection info
-    
+
   #Open DB connection
   db <- odbcConnect(database, uid = uid, pwd = pwd)
   
