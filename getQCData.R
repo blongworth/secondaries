@@ -19,4 +19,4 @@ sys <- 'both' #cfams, usams, ams1 or both
 out <- getQCData(from, to, sys)
 
 #write to file
-write.csv(out, "qcData.csv")
+save(out, file = "qcData.rda")

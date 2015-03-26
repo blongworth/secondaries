@@ -13,60 +13,36 @@ Primary standard analysis
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 
 #Load Libraries
-require(ggplot2)
-require(plyr)
-require(dplyr)
-require(knitr)
-require(RODBC)
-
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(knitr)
+library(RODBC)
 
 #Load files
 source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
-#set parameters
-from <- '2014-09-01'
-to <- 'present' #present or date
-sys <- 'both' #cfams, usams, ams1 or both
-size <- c(100,300)
+#set parameters- from, to, sys not used if loading from file
+#from <- '2014-09-01'
+#to <- 'present' #present or date
+#sys <- 'both' #cfams, usams, ams1 or both
+size <- c(40,300)
 
 #Set digits for output
-options(digits=5)
+options(digits=4)
 
-#Open DB connection
-db <- odbcConnect(database, uid = uid, pwd = pwd)
+# Get fresh secondary data
+#out <- getQCData(from, to, sys)
 
-###
-#Make intcal table
-###
+#Load QC data from file
+load("qcData.rda")
 
-#add in OX-I, OX-II
-ox <- read.csv("intcalox.csv")
-intcal <- filter(ox, rec_num == 113385) 
-
-
-
-###
-#get secondary data
-###
-
-out <- calcSecondaries(from, to, sys, intcal, db)
-
-#Close DB
-odbcClose(db)
-
-#add %err
-out$finterr <- out$f_int_error/out$f_modern
-out$fexterr <- out$f_ext_error/out$f_modern
-out$fmaxerr <- out$merr/out$f_modern
-out$errrat <- out$merr/abs(out$fmd)
-
-
-#clean out bad data points
-out.c <- subset(out, is.na(q_flag)) #Check for q_flag
-out.c <- subset(out.c, sigma < 10 & sigma > -10) #Select reasonable sigmas
-out.c <- subset(out.c, normFm < 0.02 & normFm > -0.02) #Select reasonable Fm
-out.s <- subset(out.c, gf_co2_qty > size[1] & gf_co2_qty < size[2]) #Select size range
+#Filter data
+out.s <- filter(out, rec_num == 113385, #look at normalizing ox-I
+                 f_modern > .1, f_modern < 1.6,
+                 gf_co2_qty > size[1], gf_co2_qty < size[2]) #Select size range
+                 
 ```
 
 Analysis of performance of primary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02).

@@ -33,7 +33,7 @@ options(digits=4)
 #out <- getQCData(from, to, sys)
 
 #Load QC data from file
-out <- read.csv("qcData.csv")
+load("qcData.rda")
 
 #Filter data
 out.s <- filter(out, rec_num != 113385, #don't use normalizing ox-I
