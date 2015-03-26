@@ -157,3 +157,58 @@ calcSecondaries <- function (from, to, sys, intcal, db) {
   merge (out,intcal[, c("rec_num", "name", "fm_consensus")], by= "rec_num")
     
 }
+
+getQCData <- function (from, to, sys) {
+  
+  #getQCData
+  #Get QC data from database as data frame
+  
+  #Load Libraries
+  library(c(RODBC, dplyr))
+  
+  #Load files
+  source("~/R/dbconfig.R") #DB connection info
+    
+  #Open DB connection
+  db <- odbcConnect(database, uid = uid, pwd = pwd)
+  
+  ###
+  #Make intcal table
+  ###
+  
+  #get intcal table
+  
+  intcal <- sqlQuery(db, paste("select * from ", "intercal_samples"))
+  
+  #create factor of tiri_id, order by Fm
+  intcal <- within(intcal, name <- factor(tiri_id, levels = unique(
+    tiri_id[order(fm_consensus, tiri_id)]),ordered = TRUE))
+  
+  #Replace C-6 with new consensus from Xiaomei 2010
+  intcal$fm_consensus[intcal$rec_num == 1086] <- 1.5016
+  
+  #add in OX-I, OX-II
+  ox <- read.csv("intcalox.csv")
+  intcal <- rbind(intcal, ox)
+  
+  
+  ###
+  #get secondary data
+  ###
+  
+  out <- calcSecondaries(from, to, sys, intcal, db)
+  
+  #Close DB
+  odbcClose(db)
+  
+  #Filter and munge
+  out %>% 
+    filter(is.na(q_flag), #Check for q_flag
+           sigma < 10, sigma > -10,#Select reasonable sigmas
+           normFm < 0.02, normFm > -0.02) %>% #Select reasonable Fm
+    mutate(finterr = f_int_error/f_modern, #add %err
+           fexterr = f_ext_error/f_modern, 
+           fmaxerr = merr/f_modern,
+           errrat = merr/abs(fmd))
+}
+
