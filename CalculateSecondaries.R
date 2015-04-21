@@ -54,7 +54,7 @@ getSecondary <- function (rec, from, to, sys, db) {
   f <- sqlQuery(db, paste("
         SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, 
           wheel_pos.wheel_id, target.tp_date_pressed, graphite_lab.lab_name, 
-          no_os.f_modern, no_os.f_int_error, no_os.f_ext_error, 
+          no_os.f_modern, no_os.f_int_error, no_os.f_ext_error, no_os.dc13,
           graphite.gf_co2_qty, no_os.q_flag
         FROM no_os, target, wheel_pos, graphite, graphite_lab
         WHERE target.tp_num = no_os.tp_num AND target.tp_num = wheel_pos.tp_num 
@@ -67,7 +67,7 @@ getSecondary <- function (rec, from, to, sys, db) {
         "))
   
   cur <- sqlQuery(db, paste("
-        SELECT snics_raw.tp_num, AVG(he12c) AS he12c
+        SELECT snics_raw.tp_num, AVG(le12c) AS le12c
         FROM snics_raw, target
         WHERE target.tp_num = snics_raw.tp_num
           AND target.rec_num =", rec," 
@@ -130,7 +130,7 @@ calcSecondary <- function (rec, from, to, sys, intcal, db) {
     m$merr <- pmax(m$f_int_err,m$f_ext_err)
     m<- within(m, sigma <- sigma(f_modern, intcal[intcal$rec_num == rec, 4], merr, 
                                  intcal[intcal$rec_num == rec, 15]))
-    m$fmd <- m$f_modern - fmc
+    #m$fmd <- m$f_modern - fmc
     m$normFm <- normFm(m$f_modern, fmc)
     m
   }
@@ -160,7 +160,7 @@ calcSecondaries <- function (from, to, sys, intcal, db) {
 
 #Get QC data from database as data frame
 getQCData <- function (from, to, sys) {
-
+  library(RODBC)
   #Open DB connection
   db <- odbcConnect(database, uid = uid, pwd = pwd)
   
@@ -200,7 +200,12 @@ getQCData <- function (from, to, sys) {
            normFm < 0.02, normFm > -0.02) %>% #Select reasonable Fm
     mutate(finterr = f_int_error/f_modern, #add %err
            fexterr = f_ext_error/f_modern, 
-           fmaxerr = merr/f_modern,
-           errrat = merr/abs(fmd))
+           #errrat = merr/abs(fmd),
+           fmaxerr = merr/f_modern, 
+           le12c = ifelse(system == "USAMS", le12c * -1, le12c)) %>%
+    filter(fmaxerr < 0.02) %>% 
+    group_by(osg_num) %>% #For each osg_num
+    mutate(splits = n()) #Count occurrences to get number of splits
+     
 }
 
