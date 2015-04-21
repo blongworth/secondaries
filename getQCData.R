@@ -2,7 +2,6 @@
 #R script to get QC data from database and write it to a file
 
 #Load Libraries
-library(plyr)
 library(dplyr)
 library(RODBC)
 
