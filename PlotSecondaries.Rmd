@@ -10,9 +10,8 @@ Secondary standard analysis
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 
 #Load Libraries
-library(ggplot2)
-library(plyr)
 library(dplyr)
+library(ggplot2)
 library(knitr)
 library(RODBC)
 
@@ -21,9 +20,9 @@ source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
 #set parameters- from, to, sys not used if loading from file
-#from <- '2014-09-01'
-#to <- 'present' #present or date
-#sys <- 'both' #cfams, usams, ams1 or both
+from <- '2014-09-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
 
 #Set digits for output
@@ -61,13 +60,15 @@ where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 ```{r, echo=FALSE, message=FALSE,}
 
 #Make summary table
-syssum <- ddply(out.s, .(system), summarize,
-                nFm = mean(normFm),
-                nFm.s = sd(normFm),
-                sig = mean(sigma),
-                sig.s = sd(sigma),
-                ferr = mean(fmaxerr),
-                N = length(f_modern))
+syssum <- out.s %>%
+  group_by(system) %>%
+  summarize(
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    sig = mean(sigma),
+    ferr = mean(fmaxerr),
+    N = n()
+    )
 
 knitr::kable(syssum, digits = 4, caption = "Summary data for secondaries")
 
@@ -80,28 +81,25 @@ knitr::kable(syssum, digits = 4, caption = "Summary data for secondaries")
 ```{r, echo=FALSE, message=FALSE, results='asis'}
 
 #Make summary table
-secsum <- ddply(out.s, .(name, system), summarize,
-                fm.e = mean(fm_consensus),
-                fm = mean(f_modern),
-                fm.s = sd(f_modern),
-                err = mean(merr),
-                intrerr = intrErr(sd(f_modern), mean(merr)),
-                nFm = mean(normFm),
-                nFm.s = sd(normFm),
-                sig = mean(sigma),
-                sig.s = sd(sigma),
-                ferr = mean(fmaxerr),
-                fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
-                N = length(f_modern))
-
+secsum <- out.s %>% 
+  group_by(name, system) %>%
+  summarise(
+    fm.e = mean(fm_consensus),
+    fm = mean(f_modern),
+    fm.s = sd(f_modern),
+    err = mean(merr),
+    intrerr = intrErr(sd(f_modern), mean(merr)),
+    d13c = mean(dc13),
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    ferr = mean(fmaxerr),
+    fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
+    sig = mean(sigma),
+    sig.s = sd(sigma),
+    N = n()
+    )
 
 knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
-# library(xtable)
-# 
-# table <- xtable(secsum)
-# digits(table) <- 4
-# 
-# print(table, floating=TRUE, type="html")
 ```
 
 
