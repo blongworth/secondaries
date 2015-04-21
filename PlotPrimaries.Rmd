@@ -13,20 +13,19 @@ Primary standard analysis
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 
 #Load Libraries
-library(ggplot2)
-library(plyr)
 library(dplyr)
 library(knitr)
 library(RODBC)
+library(ggplot2)
 
 #Load files
 source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
 #set parameters- from, to, sys not used if loading from file
-#from <- '2014-09-01'
-#to <- 'present' #present or date
-#sys <- 'both' #cfams, usams, ams1 or both
+from <- '2014-09-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
 
 #Set digits for output
@@ -39,10 +38,13 @@ options(digits=4)
 load("qcData.rda")
 
 #Filter data
-out.s <- filter(out, rec_num == 113385, #look at normalizing ox-I
-                 f_modern > .1, f_modern < 1.6,
-                 gf_co2_qty > size[1], gf_co2_qty < size[2]) #Select size range
-                 
+out.s <- out %>% 
+  filter(rec_num == 113385, #look at normalizing ox-I
+         f_modern > .1, f_modern < 1.6,
+         gf_co2_qty > size[1], gf_co2_qty < size[2]) %>% #Select size range
+  mutate(month = ordered(months(tp_date_pressed), 
+    c("September","October","November","December","January", "February", "March", "April")))
+  
 ```
 
 Analysis of performance of primary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02).
@@ -63,32 +65,55 @@ where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 ```{r, echo=FALSE, message=FALSE, results='asis'}
 
 #Make summary table
-secsum <- ddply(out.s, .(name, system), summarize,
-                fm.e = mean(fm_consensus),
-                fm = mean(f_modern),
-                fm.s = sd(f_modern),
-                sig = mean(sigma),
-                sig.s = sd(sigma),
-                merr.m = mean(merr),
-                intrerr = intrErr(sd(f_modern), mean(merr)),
-                N = length(f_modern))
-
+secsum <- out.s %>% 
+  group_by(name, system) %>%
+  summarise(
+    fm.e = mean(fm_consensus),
+    fm.m = mean(f_modern),
+    fm.s = sd(f_modern),
+    merr.m = mean(merr),
+    d13c = mean(dc13, na.rm = TRUE),
+    sig = mean(sigma),
+    sig.s = sd(sigma),
+    intrerr = intrErr(sd(f_modern), mean(merr)),
+    N = n()
+    )
 
 knitr::kable(secsum, digits = 4, caption = "Summary data for all primaries")
 
 #Make summary table
-out.s$month <- ordered(months(out.s$tp_date_pressed), c("September","October","November","December","January", "February", "March"))
-monthsum <- ddply(out.s, .(system, month), summarize,
-                fm.e = mean(fm_consensus),
-                fm = mean(f_modern),
-                fm.s = sd(f_modern),
-                sig = mean(sigma),
-                sig.s = sd(sigma),
-                merr.m = mean(merr),
-                intrerr = intrErr(sd(f_modern), mean(merr)),
-                N = length(f_modern))
+monthsum <- out.s %>%
+  group_by(system, month) %>%
+  summarize(
+    fm.e = mean(fm_consensus),
+    fm.m = mean(f_modern),
+    fm.s = sd(f_modern),
+    sig.m = mean(sigma),
+    sig.s = sd(sigma),
+    merr.m = mean(merr),
+    d13c = mean(dc13, na.rm = TRUE),
+    intrerr = intrErr(sd(f_modern), mean(merr)),
+    N = n()
+  )
 
 knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
+
+#Make summary table
+wheelsum <- out.s %>% 
+  group_by(system, wheel_id) %>%
+  summarize(
+    date = mean(tp_date_pressed),
+    fm.e = mean(fm_consensus),
+    fm = mean(f_modern),
+    fm.s = sd(f_modern),
+    sig = mean(sigma),
+    sig.s = sd(sigma),
+    merr.m = mean(merr),
+    intrerr = intrErr(sd(f_modern), mean(merr)),
+    N = length(f_modern)) %>%
+    arrange(system, as.Date(date))
+
+knitr::kable(wheelsum, digits = 4, caption = "Summary data for all primaries by wheel")
 
 
 ```
@@ -100,6 +125,14 @@ Looks like CFAMS is getting better while USAMS gets progressively worse. No idea
 I think the downward jump in reported error (second plot) is when CFAMS increased it's number of runs/target to 10 to match USAMS. The final 2 plots show ratio of external to internal error and external error. Interestingly, the increased number of runs decreased external error while not doing much to internal error... Does this make sense?
 
 ``` {r plots}
+ggplot(data=wheelsum, aes(x=date, y=fm.s, color=system)) + 
+  geom_point() + geom_smooth() +
+  ggtitle("SD of OX-I by wheel")
+
+ggplot(data=wheelsum, aes(x=date, y=merr.m, color=system)) + 
+  geom_point() + geom_smooth() +
+  ggtitle("reported error of OX-I by wheel")
+
 ggplot(data=monthsum, aes(x=month, y=fm.s, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
   ggtitle("SD of OX-I by month")
