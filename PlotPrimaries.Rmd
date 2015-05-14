@@ -120,10 +120,6 @@ knitr::kable(wheelsum, digits = 4, caption = "Summary data for all primaries by 
 
 # Plots of primary error by month
 
-Looks like CFAMS is getting better while USAMS gets progressively worse. No idea why. Any difference in picking standards? Any chance one system gets the first "scoop" and the other gets the second? More likely the answer is drifting tunes on both systems.
-
-I think the downward jump in reported error (second plot) is when CFAMS increased it's number of runs/target to 10 to match USAMS. The final 2 plots show ratio of external to internal error and external error. Interestingly, the increased number of runs decreased external error while not doing much to internal error... Does this make sense?
-
 ``` {r plots}
 ggplot(data=wheelsum, aes(x=date, y=fm.s, color=system)) + 
   geom_point() + geom_smooth() +
