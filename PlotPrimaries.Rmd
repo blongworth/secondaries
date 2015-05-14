@@ -39,11 +39,12 @@ load("qcData.rda")
 
 #Filter data
 out.s <- out %>% 
-  filter(rec_num == 113385, #look at normalizing ox-I
+  filter(primary == TRUE,
+         rec_num == 113385, #look at normalizing ox-I
          f_modern > .1, f_modern < 1.6,
          gf_co2_qty > size[1], gf_co2_qty < size[2]) %>% #Select size range
   mutate(month = ordered(months(tp_date_pressed), 
-    c("September","October","November","December","January", "February", "March", "April")))
+    c("September","October","November","December","January", "February", "March", "April", "May")))
   
 ```
 

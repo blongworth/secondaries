@@ -55,10 +55,12 @@ getSecondary <- function (rec, from, to, sys, db) {
         SELECT target.rec_num, target.tp_num, target.osg_num, target.target_name, 
           wheel_pos.wheel_id, target.tp_date_pressed, graphite_lab.lab_name, 
           no_os.f_modern, no_os.f_int_error, no_os.f_ext_error, no_os.dc13,
-          graphite.gf_co2_qty, no_os.q_flag
-        FROM no_os, target, wheel_pos, graphite, graphite_lab
-        WHERE target.tp_num = no_os.tp_num AND target.tp_num = wheel_pos.tp_num 
-          AND graphite.osg_num = target.osg_num 
+          graphite.gf_co2_qty, no_os.q_flag, snics_results.sample_type, snics_results.sample_type_1
+        FROM no_os, target, wheel_pos, graphite, graphite_lab, snics_results
+        WHERE target.tp_num = no_os.tp_num 
+          AND target.tp_num = wheel_pos.tp_num 
+          AND target.tp_num = snics_results.tp_num
+          AND target.osg_num = graphite.osg_num 
           AND target.graphite_lab = graphite_lab.lab_id
           AND target.rec_num =", rec," 
           ",whid, "
@@ -193,8 +195,14 @@ getQCData <- function (from, to, sys) {
   #Close DB
   odbcClose(db)
   
+  #function to determine primaries
+  prim <- function(x) {
+    if (!is.na(x)) {
+      
+    }
+  }
   #Filter and munge
-  out %>% 
+  out.t <- out %>% 
     filter(is.na(q_flag), #Check for q_flag
            sigma < 10, sigma > -10,#Select reasonable sigmas
            normFm < 0.02, normFm > -0.02) %>% #Select reasonable Fm
@@ -202,7 +210,8 @@ getQCData <- function (from, to, sys) {
            fexterr = f_ext_error/f_modern, 
            #errrat = merr/abs(fmd),
            fmaxerr = merr/f_modern, 
-           le12c = ifelse(system == "USAMS", le12c * -1, le12c)) %>%
+           le12c = ifelse(system == "USAMS", le12c * -1, le12c),
+           primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S", TRUE, ifelse(!is.na(sample_type) & sample_type == "S", TRUE, FALSE))) %>%
     filter(fmaxerr < 0.02) %>% 
     group_by(osg_num) %>% #For each osg_num
     mutate(splits = n()) #Count occurrences to get number of splits

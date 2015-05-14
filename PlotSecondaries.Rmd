@@ -35,7 +35,7 @@ options(digits=4)
 load("qcData.rda")
 
 #Filter data
-out.s <- filter(out, rec_num != 113385, #don't use normalizing ox-I
+out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
                  f_modern > .1, f_modern < 1.6,
                  gf_co2_qty > size[1], gf_co2_qty < size[2]) #Select size range
                  
