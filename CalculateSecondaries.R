@@ -211,7 +211,10 @@ getQCData <- function (from, to, sys) {
            #errrat = merr/abs(fmd),
            fmaxerr = merr/f_modern, 
            le12c = ifelse(system == "USAMS", le12c * -1, le12c),
-           primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S", TRUE, ifelse(!is.na(sample_type) & sample_type == "S", TRUE, FALSE))) %>%
+           primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S",
+                            TRUE, 
+                            ifelse(!is.na(sample_type) & sample_type == "S", 
+                                   TRUE, FALSE))) %>%
     filter(fmaxerr < 0.02) %>% 
     group_by(osg_num) %>% #For each osg_num
     mutate(splits = n()) #Count occurrences to get number of splits
