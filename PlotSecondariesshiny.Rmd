@@ -1,0 +1,182 @@
+---
+runtime: shiny
+output: html_document
+---
+
+
+Secondary standard analysis
+========================================================
+
+`r as.character(format(Sys.Date(), format="%B %d, %Y"))`
+
+
+
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Load Libraries
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(RODBC)
+
+#Load files
+source("~/R/dbconfig.R") #DB connection info
+source("CalculateSecondaries.R") #Functions
+
+#set parameters- from, to, sys not used if loading from file
+from <- '2014-09-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
+size <- c(40,300)
+
+#Set digits for output
+options(digits=4)
+
+# Get fresh secondary data
+#out <- getQCData(from, to, sys)
+
+#Load QC data from file
+load("qcData.rda")
+```
+
+
+## Filter data
+
+Use these widgets to filter secondary data as desired
+
+```{r echo = FALSE}
+dateRangeInput('date',
+               label = 'Date Range',
+               start = Sys.Date() - 90, 
+               end = Sys.Date(),
+               max = Sys.Date())
+sliderInput("size", "Graphite Size",
+            1, 500, value = c(40,300))
+sliderInput("fm", "Fm Range",
+            0, 2, value = c(.1,1.6), step = 0.05)
+ 
+out.s <- reactive({
+    # Due to dplyr issue #318, we need temp variables for input values
+    mindate <- input$date[1]
+    maxdate <- input$date[2]
+    minsize <- input$size[1]
+    maxsize <- input$size[2]
+    minfm <- input$fm[1]
+    maxfm <- input$fm[2]
+    
+    # Apply filters
+    out %>%
+      filter(
+        as.Date(tp_date_pressed) >= as.Date(mindate),
+        as.Date(tp_date_pressed) <= as.Date(maxdate),
+        gf_co2_qty >= minsize,
+        gf_co2_qty <= maxsize,
+        fm_consensus >= minfm,
+        fm_consensus <= maxfm
+      ) 
+    
+    #m <- as.data.frame(m)
+})
+
+```
+
+Analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+
+Normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
+
+
+# Summary table
+
+## By System
+
+```{r, echo=FALSE, message=FALSE,}
+
+renderTable({
+  #Make summary table
+  out.s() %>%
+    group_by(system) %>%
+    summarize(
+      nFm = mean(normFm),
+      nFm.s = sd(normFm),
+      sig = mean(sigma),
+      ferr = mean(fmaxerr),
+      N = n()
+      )
+  
+})
+
+
+#print(table, floating=TRUE, type="html")
+```
+
+
+## By Secondary and System
+```{r, echo=FALSE, message=FALSE, results='asis'}
+
+renderTable({
+#Make summary table
+out.s() %>% 
+  group_by(name, system) %>%
+  summarise(
+    fm.e = mean(fm_consensus),
+    fm = mean(f_modern),
+    fm.s = sd(f_modern),
+    err = mean(merr),
+    intrerr = intrErr(sd(f_modern), mean(merr)),
+    d13c = mean(dc13),
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    ferr = mean(fmaxerr),
+    fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
+    sig = mean(sigma),
+    sig.s = sd(sigma),
+    N = n()
+    )
+})
+#knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
+```
+
+
+# Histograms
+
+```{r SigmaHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+renderPlot({
+ggplot(out.s(), aes(sigma)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Histogram, ", sys, ", ", from))
+})
+```
+
+
+# Boxplots
+
+Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
+
+```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+renderPlot({
+#sigma boxplots
+p <- ggplot(out.s(), aes(name, sigma)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+})
+
+renderPlot({
+#normfm boxplots
+p <- ggplot(out.s(), aes(name, normFm)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Normalized Fm difference Boxplots, ", sys, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+})
+```
+
+
+
+
