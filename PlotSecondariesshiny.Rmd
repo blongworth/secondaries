@@ -23,11 +23,6 @@ library(RODBC)
 source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
-#set parameters- from, to, sys not used if loading from file
-from <- '2014-09-01'
-to <- 'present' #present or date
-sys <- 'both' #cfams, usams, ams1 or both
-size <- c(40,300)
 
 #Set digits for output
 options(digits=4)
@@ -37,6 +32,10 @@ options(digits=4)
 
 #Load QC data from file
 load("qcData.rda")
+
+out <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
+                lab_name == "OSG") #Use only samples from the SPL
+
 ```
 
 
@@ -107,7 +106,7 @@ renderTable({
       N = n()
       )
   
-})
+}, digits = 4)
 
 
 #print(table, floating=TRUE, type="html")
@@ -136,7 +135,7 @@ out.s() %>%
     sig.s = sd(sigma),
     N = n()
     )
-})
+}, digits=4)
 #knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
 ```
 
@@ -147,7 +146,7 @@ out.s() %>%
 renderPlot({
 ggplot(out.s(), aes(sigma)) + geom_histogram() + 
   facet_grid(system ~ .) + 
-  ggtitle(paste("Sigma Histogram, ", sys, ", ", from))
+  ggtitle(paste("Sigma Histogram"))
 })
 ```
 
@@ -162,7 +161,7 @@ renderPlot({
 p <- ggplot(out.s(), aes(name, sigma)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
-  ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +
+  ggtitle(paste("Sigma Boxplots")) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 })
 
@@ -171,7 +170,7 @@ renderPlot({
 p <- ggplot(out.s(), aes(name, normFm)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
-  ggtitle(paste("Normalized Fm difference Boxplots, ", sys, ", ", from)) +
+  ggtitle(paste("Normalized Fm difference Boxplots")) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
 })
