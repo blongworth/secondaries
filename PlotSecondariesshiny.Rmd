@@ -33,7 +33,7 @@ options(digits=4)
 #Load QC data from file
 load("qcData.rda")
 
-out <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
+out <- filter(out, primary == FALSE, rec_num != 113385, #don't use normalizing ox-I
                 lab_name == "OSG") #Use only samples from the SPL
 
 ```
@@ -176,6 +176,22 @@ p + facet_grid(system ~ .) +
 })
 ```
 
+# System Precision
+
+Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. Ext/Int Precision Ratio looks at whether error is dominated by repeatability or counting statistics. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
+
+```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+
+renderPlot({
+#   qplot(name,finterr, color=system, data=out.s(), geom="boxplot", ylim=c(0,.02), main="Internal precision") +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#   qplot(name,fexterr, color=system, data=out.s(), geom="boxplot", ylim=c(0,.02), main="External precision") +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  qplot(name,fexterr/finterr, color=system, data=out.s(), geom="boxplot", main="Ext/Int Precision Ratio") +
+    geom_hline(yintercept=1) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  })
+```
 
 
 
