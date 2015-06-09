@@ -19,8 +19,8 @@ library(RODBC)
 source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
-#set parameters- from, to, sys not used if loading from file
-from <- '2014-09-01'
+#set parameters
+from <- '2015-09-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -36,10 +36,12 @@ load("qcData.rda")
 
 #Filter data
 out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
-                 f_modern > .1, f_modern < 1.6,
-                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                lab_name == "OSG") #Use only samples from the SPL
-                 
+                f_modern > .1, f_modern < 1.6,
+                as.Date(tp_date_pressed) >= as.Date(from),
+                as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
+                gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
+                sigma < 10, sigma > -10, 
+                lab_name == "OSG") #Use only samples from the SPL```
 ```
 
 Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
