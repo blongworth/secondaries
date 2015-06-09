@@ -154,3 +154,37 @@ p + geom_hline(yintercept=1.0398) + geom_point() + geom_smooth(span=1) +
   ggtitle(paste("Mean fm error vs date, ", sys, ", ", from))
 ```
 
+# System Precision
+
+Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. Ext/Int Precision Ratio looks at whether error is dominated by repeatability or counting statistics. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
+
+```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
+
+ggplot(out.s, aes(counts, finterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.0015, .0025)) + 
+  ggtitle("Internal precision") 
+ggplot(out.s, aes(le12c, finterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.0015, .0025)) + 
+  ggtitle("Internal precision") 
+ggplot(out.s, aes(counts, fexterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.0015, .0025)) + 
+  ggtitle("External precision") 
+ggplot(out.s, aes(le12c, fexterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.0015, .0025)) + 
+  ggtitle("External precision") 
+ggplot(out.s, aes(counts, fexterr/finterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.99, 1.01)) + 
+  ggtitle("Ext/Int Precision Ratio") +
+  geom_hline(yintercept=1) 
+ggplot(out.s, aes(le12c, fexterr/finterr)) +
+  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+  #scale_y_continuous(limits = c(.99, 1.01)) + 
+  ggtitle("Ext/Int Precision Ratio") +
+  geom_hline(yintercept=1) 
+```
+
