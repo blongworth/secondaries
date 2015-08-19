@@ -40,8 +40,12 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                #sigma < 10, sigma > -10, 
-                lab_name == "OSG") #Use only samples from the SPL
+                lab_name == "OSG", #Use only samples from the SPL
+                is.na(q_flag), #Check for q_flag
+                sigma < 10, sigma > -10, #Select reasonable sigmas
+                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+                fmaxerr < 0.10
+              )
 ```
 
 Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.

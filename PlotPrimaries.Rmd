@@ -42,10 +42,18 @@ out.s <- out %>%
   filter(primary == TRUE,
          rec_num %in% c(113385, 113386), #look at normalizing ox-I
          f_modern > .1, f_modern < 1.6,
-         gf_co2_qty > size[1], gf_co2_qty < size[2]) %>% #Select size range
+         gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
+         as.Date(tp_date_pressed) >= as.Date(from),
+         as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
+         lab_name == "OSG", #Use only samples from the SPL
+         is.na(q_flag), #Check for q_flag
+         sigma < 10, sigma > -10, #Select reasonable sigmas
+         normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+         fmaxerr < 0.10
+         ) %>%
   mutate(month = ordered(months(tp_date_pressed), 
-    c("September","October","November","December","January", "February", "March", "April", "May", "June", "July", "August")))
-  
+                         c("September","October","November","December","January", "February", "March", "April", "May", "June", "July", "August")))
+
 ```
 
 Analysis of performance of primary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02).

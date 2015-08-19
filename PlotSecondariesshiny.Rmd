@@ -38,9 +38,13 @@ options(digits=4)
 #Load QC data from file
 load("./qcData.rda")
 
-out <- filter(out, primary == FALSE, rec_num != 113385, #don't use normalizing ox-I
-                lab_name == "OSG") #Use only samples from the SPL
-
+out <- filter(out, primary == FALSE, #don't use normalizing ox-I
+                lab_name == "OSG", #Use only samples from the SPL
+                is.na(q_flag), #Check for q_flag
+                sigma < 10, sigma > -10, #Select reasonable sigmas
+                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+                fmaxerr < 0.10
+              )
 ```
 
 
