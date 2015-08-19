@@ -259,8 +259,8 @@ getQCData <- function (from, to, sys) {
   #Filter and munge
   out.t <- out %>% 
     filter(is.na(q_flag), #Check for q_flag
-           sigma < 20, sigma > -20, #Select reasonable sigmas
-           normFm < 0.10, normFm > -0.10) %>% #Select reasonable Fm
+           sigma < 10, sigma > -10, #Select reasonable sigmas
+           normFm < 0.05, normFm > -0.05) %>% #Select reasonable Fm
     mutate(finterr = f_int_error/f_modern, #add %err
            fexterr = f_ext_error/f_modern, 
            #errrat = merr/abs(fmd),
