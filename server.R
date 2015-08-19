@@ -4,6 +4,13 @@ library(dplyr)
 #Load Secondaries data frame
 load("./qcData.rda")
 
+out <- filter(out, 
+                is.na(q_flag), #Check for q_flag
+                sigma < 10, sigma > -10, #Select reasonable sigmas
+                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+                fmaxerr < 0.10
+)
+
 shinyServer(function(input, output, session) {
 
   # Filter the secondaries

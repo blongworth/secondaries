@@ -29,7 +29,7 @@ shinyUI(fluidPage(
                        start = Sys.Date() - 90, 
                        end = Sys.Date(),
                        max = Sys.Date()),
-        sliderInput("size", "Graphite Size",
+        sliderInput("size", "Graphite Size (umol)",
                     1, 500, value = c(40,300)),
         sliderInput("fm", "Fm Range",
                     0, 2, value = c(.1,1.6), step = 0.05),
