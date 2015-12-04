@@ -1,13 +1,8 @@
 library(shiny)
 library(ggvis)
 
-# For dropdown menu
-# actionLink <- function(inputId, ...) {
-#   tags$a(href='javascript:void',
-#          id=inputId,
-#          class='action-button',
-#          ...)
-# }
+# Secondary explorer shiny app.
+# Loads an R data file of secondary standard data and plots
 
 shinyUI(fluidPage(
   titlePanel("Secondary explorer"),

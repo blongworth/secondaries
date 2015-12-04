@@ -250,12 +250,6 @@ getQCData <- function (from, to, sys) {
   #Close DB
   odbcClose(db)
   
-  #function to determine primaries
-  prim <- function(x) {
-    if (!is.na(x)) {
-      
-    }
-  }
   #Filter and munge
   out.t <- out %>% 
 #     filter(is.na(q_flag), #Check for q_flag

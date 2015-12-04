@@ -52,7 +52,7 @@ out.s <- out %>%
          fmaxerr < 0.10
          ) %>%
   mutate(month = ordered(months(tp_date_pressed), 
-                         c("September","October","November","December","January", "February", "March", "April", "May", "June", "July", "August")))
+                         c("November","December","January", "February", "March", "April", "May", "June", "July", "August","September","October")))
 
 ```
 
