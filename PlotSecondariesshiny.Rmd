@@ -38,13 +38,6 @@ options(digits=4)
 #Load QC data from file
 load("./qcData.rda")
 
-out <- filter(out, primary == FALSE, #don't use normalizing ox-I
-                lab_name == "OSG", #Use only samples from the SPL
-                is.na(q_flag), #Check for q_flag
-                sigma < 10, sigma > -10, #Select reasonable sigmas
-                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
-                fmaxerr < 0.10
-              )
 ```
 
 
@@ -62,7 +55,14 @@ sliderInput("size", "Graphite Size (umol)",
             1, 500, value = c(40,300))
 sliderInput("fm", "Fm Range",
             0, 2, value = c(.1,1.6), step = 0.05)
- 
+sliderInput("sigma", "Max Sigma",
+            0, 20, value = 10)
+sliderInput("nfm", "Max norm Fm",
+            0, 1, value = 0.02)
+sliderInput("fme", "Max reported error",
+            0, 1, value = 0.1)
+
+
 out.s <- reactive({
     # Due to dplyr issue #318, we need temp variables for input values
     mindate <- input$date[1]
@@ -71,7 +71,10 @@ out.s <- reactive({
     maxsize <- input$size[2]
     minfm <- input$fm[1]
     maxfm <- input$fm[2]
-    
+    sig <- input$sigma
+    nfm <- input$nfm
+    fme <- input$fme
+
     # Apply filters
     out %>%
       filter(
@@ -80,9 +83,14 @@ out.s <- reactive({
         gf_co2_qty >= minsize,
         gf_co2_qty <= maxsize,
         fm_consensus >= minfm,
-        fm_consensus <= maxfm
-      ) 
-    
+        fm_consensus <= maxfm,
+        primary == FALSE, #don't use normalizing ox-I
+        lab_name == "OSG", #Use only samples from the SPL
+        is.na(q_flag), #Check for q_flag
+        sigma < sig, sigma > -sig, #Select reasonable sigmas
+        normFm < nfm, normFm > -nfm, #Select reasonable Fm
+        fmaxerr < fme
+        )
     #m <- as.data.frame(m)
 })
 
