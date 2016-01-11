@@ -28,7 +28,7 @@ sys <- 'both' #cfams, usams, ams1 or both
 #Pull the data
 db <- odbcConnect(database, uid = uid, pwd = pwd)
 ss <- getSecondary(127298, from, to, sys, db)
-
+odbcClose(db)
 ```
 
 Here's the data...

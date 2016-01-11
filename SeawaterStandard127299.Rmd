@@ -28,7 +28,7 @@ sys <- 'both' #cfams, usams, ams1 or both
 #Pull the data
 db <- odbcConnect(database, uid = uid, pwd = pwd)
 ss <- getSecondary(127299, from, to, sys, db)
-
+odbcClose(db)
 ```
 
 Here's the data...
@@ -36,13 +36,7 @@ Here's the data...
 ```{r, echo=FALSE, message=FALSE}
 qplot(f_modern, data=ss)
 
-kable(select(ss, tp_num, tp_date_pressed, wheel_id, gf_co2_qty, he12c, f_modern, f_int_error, f_ext_error))
-```
-
-That low fm value is smaller but has high current. Not sure what the deal was, but let's cut it.
-
-```{r}
-ss <- filter(ss, f_modern > .92)
+kable(select(ss, tp_num, tp_date_pressed, wheel_id, gf_co2_qty, f_modern, f_int_error, f_ext_error))
 ```
 
 That leaves us with N = `r nrow(ss)`, mean = `r mean(ss$f_modern)`, sd = `r sd(ss$f_modern)`.
