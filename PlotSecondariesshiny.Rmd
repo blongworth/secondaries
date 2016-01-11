@@ -38,6 +38,11 @@ options(digits=4)
 #Load QC data from file
 load("./qcData.rda")
 
+out <- filter(out,
+        primary == FALSE, #don't use normalizing ox-I
+        lab_name == "OSG", #Use only samples from the SPL
+        is.na(q_flag) #Check for q_flag
+)
 ```
 
 
@@ -56,11 +61,11 @@ sliderInput("size", "Graphite Size (umol)",
 sliderInput("fm", "Fm Range",
             0, 2, value = c(.1,1.6), step = 0.05)
 sliderInput("sigma", "Max Sigma",
-            0, 20, value = 10)
+            0, 12, value = 10)
 sliderInput("nfm", "Max norm Fm",
-            0, 1, value = 0.02)
+            0, 0.1, value = 0.02)
 sliderInput("fme", "Max reported error",
-            0, 1, value = 0.1)
+            0, 0.05, value = 0.05)
 
 
 out.s <- reactive({
@@ -84,9 +89,6 @@ out.s <- reactive({
         gf_co2_qty <= maxsize,
         fm_consensus >= minfm,
         fm_consensus <= maxfm,
-        primary == FALSE, #don't use normalizing ox-I
-        lab_name == "OSG", #Use only samples from the SPL
-        is.na(q_flag), #Check for q_flag
         sigma < sig, sigma > -sig, #Select reasonable sigmas
         normFm < nfm, normFm > -nfm, #Select reasonable Fm
         fmaxerr < fme
@@ -161,10 +163,12 @@ out.s() %>%
 
 ```{r SigmaHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 renderPlot({
-ggplot(out.s(), aes(sigma)) + geom_histogram() + 
+ggplot(out.s(), aes(sigma)) + geom_histogram(bins = input$bins) + 
   facet_grid(system ~ .) + 
   ggtitle(paste("Sigma Histogram"))
 })
+sliderInput("bins", "number of histogram bins",
+            1, 100, value = 30)
 ```
 
 
