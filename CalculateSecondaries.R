@@ -4,12 +4,13 @@
 #Define functions
 ####
 
+#Calculate standard error
+se <- function(x) sqrt(var(x)/length(x))
 
 #Calculate Sigma
 sigma <- function(fmm,fmc,em,ec) {
   (fmm - fmc) /sqrt(em^2 + ec^2)
 }
-
 
 #Calculate normalized fm
 normFm <- function (fmm, fmc) {
@@ -25,7 +26,6 @@ intrErr <- function(totErr, targErr) {
 totErr <- function(targErr, intrErr) {
   sqrt(targErr^2 + intrErr^2)
 }
-
 
 
 getSecondary <- function (rec, from, to, sys, db) { 
@@ -80,7 +80,7 @@ getSecondary <- function (rec, from, to, sys, db) {
           GROUP BY snics_raw.tp_num
         "))
   
-count <- sqlQuery(db, paste("
+  count <- sqlQuery(db, paste("
         SELECT snics_raw.tp_num, SUM(cnt_14c) AS counts
         FROM snics_raw, target
         WHERE target.tp_num = snics_raw.tp_num
@@ -96,20 +96,11 @@ count <- sqlQuery(db, paste("
   left_join(f, count, by = "tp_num")
 }
 
+
 getOldSecondary <- function (rec, from, to, sys, db) { 
-  #Get data for a secondary from database
+  #Get data prior to snicser
   #Return query result as data table
-  
-#   #What system do we want data for?
-#   if (sys == "cfams") {
-#     whid <- "AND wheel_id LIKE 'C%'"
-#   } else if (sys =="usams") {
-#     whid <- "AND wheel_id LIKE 'U%'"
-#   } else if (sys =="both") {
-#     whid <- "" 
-#   } else {
-#     whid <- "AND wheel_id NOT LIKE 'C%'"
-#   }
+  #This should be rolled into main function as a conditional
   
   #Data to present or provided end date
   if (to != "present") {
@@ -134,12 +125,11 @@ getOldSecondary <- function (rec, from, to, sys, db) {
                           AND target.tp_date_pressed > '",from,"'
                           ", ts, "
                           "))
-  
-  
 }
 
+
 getSecondaryQC <- function (rec, from, to, sys, db) { 
-  #Get data for a secondary from database
+  #Get data for a secondary from database using qc table
   #Return query result as data table
   
   #What system do we want data for?
@@ -187,7 +177,6 @@ calcSecondary <- function (rec, from, to, sys, intcal, db) {
     m$merr <- pmax(m$f_int_err,m$f_ext_err)
     m<- within(m, sigma <- sigma(f_modern, intcal[intcal$rec_num == rec, 4], merr, 
                                  intcal[intcal$rec_num == rec, 15]))
-    #m$fmd <- m$f_modern - fmc
     m$normFm <- normFm(m$f_modern, fmc)
     m
   }
@@ -217,7 +206,7 @@ calcSecondaries <- function (from, to, sys, intcal, db) {
 
 #Get QC data from database as data frame
 getQCData <- function (from, to, sys) {
-  library(RODBC)
+  
   #Open DB connection
   db <- odbcConnect(database, uid = uid, pwd = pwd)
   
@@ -252,9 +241,6 @@ getQCData <- function (from, to, sys) {
   
   #Filter and munge
   out.t <- out %>% 
-#     filter(is.na(q_flag), #Check for q_flag
-#            sigma < 10, sigma > -10, #Select reasonable sigmas
-#            normFm < 0.05, normFm > -0.05) %>% #Select reasonable Fm
     mutate(finterr = f_int_error/f_modern, #add %err
            fexterr = f_ext_error/f_modern, 
            #errrat = merr/abs(fmd),
@@ -264,7 +250,6 @@ getQCData <- function (from, to, sys) {
                             TRUE, 
                             ifelse(!is.na(sample_type) & sample_type == "S", 
                                    TRUE, FALSE))) %>%
-    #filter(fmaxerr < 0.10) %>% 
     group_by(osg_num) %>% #For each osg_num
     mutate(splits = n()) #Count occurrences to get number of splits
      

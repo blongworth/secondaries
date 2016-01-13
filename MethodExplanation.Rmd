@@ -2,7 +2,7 @@
 title: "Secondary Analysis Method"
 author: "Brett Longworth"
 date: "1/7/2016"
-output: pdf_document
+output: html_document
 ---
 
 This document describes the method I use to extract secondary standards from the database, normalize the data, calculate sigma and other statisics and display. Please check out the full code for the project for more detail. The code is in R, but I've tried to add explanations and comment as much as possible. The everyday code is broken up into functions to make it more flexible.

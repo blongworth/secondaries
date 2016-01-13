@@ -75,12 +75,13 @@ syssum <- out.s %>%
   summarize(
     nFm = mean(normFm),
     nFm.s = sd(normFm),
+    nFm.e = se(normFm),
     sig = mean(sigma),
     ferr = mean(fmaxerr),
     N = n()
     )
 
-knitr::kable(syssum, digits = 4, caption = "Summary data for secondaries")
+knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
 
 
 #print(table, floating=TRUE, type="html")
@@ -102,6 +103,7 @@ secsum <- out.s %>%
     d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
+    nFm.e = se(normFm),
     ferr = mean(fmaxerr),
     fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
     sig = mean(sigma),
