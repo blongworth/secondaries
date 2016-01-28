@@ -23,12 +23,6 @@ library(RODBC)
 #source("~/R/dbconfig.R") #DB connection info
 #source("CalculateSecondaries.R") #Functions
 
-#Functions
-#calculate intrinsic error
-intrErr <- function(totErr, targErr) {
-  ifelse (totErr < targErr, NA, sqrt(totErr^2 - targErr^2))
-}
-
 #Set digits for output
 options(digits=4)
 
@@ -87,13 +81,12 @@ out.s <- reactive({
         as.Date(tp_date_pressed) <= as.Date(maxdate),
         gf_co2_qty >= minsize,
         gf_co2_qty <= maxsize,
-        fm_consensus >= minfm,
-        fm_consensus <= maxfm,
+        fm_exp >= minfm,
+        fm_exp <= maxfm,
         sigma < sig, sigma > -sig, #Select reasonable sigmas
         normFm < nfm, normFm > -nfm, #Select reasonable Fm
-        fmaxerr < fme
+        frep_err < fme
         )
-    #m <- as.data.frame(m)
 })
 
 ```
@@ -121,7 +114,7 @@ renderTable({
       nFm = mean(normFm),
       nFm.s = sd(normFm),
       sig = mean(sigma),
-      ferr = mean(fmaxerr),
+      ferr = mean(frep_err),
       N = n()
       )
   
@@ -140,22 +133,18 @@ renderTable({
 out.s() %>% 
   group_by(name, system) %>%
   summarise(
-    fm.e = mean(fm_consensus),
+    fm.e = mean(fm_exp),
     fm = mean(f_modern),
     fm.s = sd(f_modern),
-    err = mean(merr),
-    intrerr = intrErr(sd(f_modern), mean(merr)),
+    err = mean(rep_err),
     d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
-    ferr = mean(fmaxerr),
-    fintrerr = intrErr(sd(normFm), mean(fmaxerr)),
+    ferr = mean(frep_err),
     sig = mean(sigma),
-    sig.s = sd(sigma),
     N = n()
     )
 }, digits=4)
-#knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
 ```
 
 
@@ -179,7 +168,7 @@ Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 renderPlot({
 #sigma boxplots
-p <- ggplot(out.s(), aes(name, sigma)) + geom_hline(yintercept=0) + 
+p <- ggplot(out.s(), aes(name, sigma, color=process)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
   ggtitle(paste("Sigma Boxplots")) +
@@ -188,7 +177,7 @@ p + facet_grid(system ~ .) +
 
 renderPlot({
 #normfm boxplots
-p <- ggplot(out.s(), aes(name, normFm)) + geom_hline(yintercept=0) + 
+p <- ggplot(out.s(), aes(name, normFm, color=process)) + geom_hline(yintercept=0) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
   ggtitle(paste("Normalized Fm difference Boxplots")) +
@@ -196,23 +185,4 @@ p + facet_grid(system ~ .) +
 
 })
 ```
-
-# System Precision
-
-Looking at fractional error within samples to get an idea of system precision. This is error / fm. Internal (counting) error and external error compared. Ext/Int Precision Ratio looks at whether error is dominated by repeatability or counting statistics. I am not sure that these errors are comparable between systems, so please take with a grain of salt.
-
-```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
-
-renderPlot({
-#   qplot(name,finterr, color=system, data=out.s(), geom="boxplot", ylim=c(0,.02), main="Internal precision") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1))
-#   qplot(name,fexterr, color=system, data=out.s(), geom="boxplot", ylim=c(0,.02), main="External precision") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  qplot(name,fexterr/finterr, color=system, data=out.s(), geom="boxplot", main="Ext/Int Precision Ratio") +
-    geom_hline(yintercept=1) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  })
-```
-
-
 
