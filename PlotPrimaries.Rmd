@@ -23,7 +23,7 @@ source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
 #set parameters- from, to, sys not used if loading from file
-from <- '2014-09-01'
+from <- '2015-02-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -49,10 +49,10 @@ out.s <- out %>%
          is.na(q_flag), #Check for q_flag
          sigma < 10, sigma > -10, #Select reasonable sigmas
          normFm < 0.02, normFm > -0.02, #Select reasonable Fm
-         fmaxerr < 0.10
+         frep_err < 0.10
          ) %>%
-  mutate(month = ordered(months(tp_date_pressed), 
-                         c("November","December","January", "February", "March", "April", "May", "June", "July", "August","September","October")))
+  mutate(month = ordered(months(tp_date_pressed)))#, 
+               #          c("November","December","January", "February", "March", "April", "May", "June", "July", "August","September","October")))
 
 ```
 
@@ -78,11 +78,11 @@ secsum <- out.s %>%
   group_by(name, system) %>%
   summarise(
     fm.s = sd(f_modern),
-    merr.m = mean(merr),
+    rep_err.m = mean(rep_err),
     d13c = mean(dc13, na.rm = TRUE),
     sig = mean(sigma),
     sig.s = sd(sigma),
-    intrerr = intrErr(sd(f_modern), mean(merr)),
+    intrerr = intrErr(sd(f_modern), mean(rep_err)),
     N = n()
     )
 
@@ -95,9 +95,9 @@ monthsum <- out.s %>%
     fm.s = sd(f_modern),
     sig.m = mean(sigma),
     sig.s = sd(sigma),
-    merr.m = mean(merr),
+    rep_err.m = mean(rep_err),
     d13c = mean(dc13, na.rm = TRUE),
-    intrerr = intrErr(sd(f_modern), mean(merr)),
+    intrerr = intrErr(sd(f_modern), mean(rep_err)),
     N = n()
   )
 
@@ -111,8 +111,8 @@ wheelsum <- out.s %>%
     fm.s = sd(f_modern),
     sig = mean(sigma),
     sig.s = sd(sigma),
-    merr.m = mean(merr),
-    intrerr = intrErr(sd(f_modern), mean(merr)),
+    rep_err.m = mean(rep_err),
+    intrerr = intrErr(sd(f_modern), mean(rep_err)),
     N = length(f_modern)) %>%
     arrange(system, as.Date(date))
 
@@ -128,7 +128,7 @@ ggplot(data=wheelsum, aes(x=date, y=fm.s, color=system)) +
   geom_point() + geom_smooth(span = 0.2) +
   ggtitle("SD of OX-I by wheel")
 
-ggplot(data=wheelsum, aes(x=date, y=merr.m, color=system)) + 
+ggplot(data=wheelsum, aes(x=date, y=rep_err.m, color=system)) + 
   geom_point() + geom_smooth(span = 0.2) +
   ggtitle("reported error of OX-I by wheel")
 
@@ -138,21 +138,21 @@ ggplot(data=monthsum, aes(x=month, y=fm.s, fill=system)) +
   scale_x_discrete(name="") +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
 
-ggplot(data=monthsum, aes(x=month, y=merr.m, fill=system)) + 
+ggplot(data=monthsum, aes(x=month, y=rep_err.m, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") +
   coord_cartesian(ylim = c(0.002, 0.003)) +
   ggtitle("reported error of OX-I by month") + 
   scale_x_discrete(name="") +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
 
-ggplot(data=out.s, aes(x=month, y=f_ext_error/f_int_error, fill=system)) + 
+ggplot(data=out.s, aes(x=month, y=ext_err/int_err, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
   coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month") + 
   scale_x_discrete(name="") +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
 
-ggplot(data=out.s, aes(x=month, y=f_ext_error, fill=system)) + 
+ggplot(data=out.s, aes(x=month, y=ext_err, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
 #  coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month") + 
@@ -170,28 +170,28 @@ Looking at fractional error within samples to get an idea of system precision. T
 
 ```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
 
-ggplot(out.s, aes(counts, finterr)) +
+ggplot(out.s, aes(counts, int_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.0015, .0025)) + 
   ggtitle("Internal precision") 
-ggplot(out.s, aes(le12c, finterr)) +
+ggplot(out.s, aes(le12c, int_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.0015, .0025)) + 
   ggtitle("Internal precision") 
-ggplot(out.s, aes(counts, fexterr)) +
+ggplot(out.s, aes(counts, ext_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.0015, .0025)) + 
   ggtitle("External precision") 
-ggplot(out.s, aes(le12c, fexterr)) +
+ggplot(out.s, aes(le12c, ext_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.0015, .0025)) + 
   ggtitle("External precision") 
-ggplot(out.s, aes(counts, fexterr/finterr)) +
+ggplot(out.s, aes(counts, ext_err/int_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.99, 1.01)) + 
   ggtitle("Ext/Int Precision Ratio") +
   geom_hline(yintercept=1) 
-ggplot(out.s, aes(le12c, fexterr/finterr)) +
+ggplot(out.s, aes(le12c, ext_err/int_err)) +
   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
   #scale_y_continuous(limits = c(.99, 1.01)) + 
   ggtitle("Ext/Int Precision Ratio") +

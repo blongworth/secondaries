@@ -31,14 +31,12 @@ totErr <- function(targErr, intrErr) {
   sqrt(targErr^2 + intrErr^2)
 }
 
-getStandards <- function (rec = NA, from, to = "present", sys = "both", getcurrents = TRUE) { 
+getStandards <- function (from, to = "present", sys = "both", getcurrents = TRUE, rec = NULL) { 
   #Get data for all secondaries from database
   #Return query result as data table
   
-  # need to add error handling for db functions
-
   #get any rec_num if requested
-  if (is.na(rec)) {
+  if (is.null(rec)) {
     samples  <- paste("INNER JOIN standards
                          ON target.rec_num = standards.rec_num
                        WHERE 
@@ -67,8 +65,6 @@ getStandards <- function (rec = NA, from, to = "present", sys = "both", getcurre
   } else {
     ts <- ""
   }
-  
-  db <- RODBC::odbcConnect(database, uid = uid, pwd = pwd)
   
   dquery <- paste("SELECT 
                     target.rec_num, target.tp_num, target.osg_num,
@@ -110,19 +106,27 @@ getStandards <- function (rec = NA, from, to = "present", sys = "both", getcurre
 
 
   #Do the queries
+  
+  db <- RODBC::odbcConnect(database, uid = uid, pwd = pwd)
+  
   data <- RODBC::sqlQuery(db, dquery)
   if (is.character(data)) {
+    RODBC::odbcClose(db)
     stop(paste(data, collapse = "\n"))
   }
 
-  if (getcurrents) {
-    cur <- RODBC::sqlQuery(db, cquery)
-    if (is.character(cur)) {
-      stop(paste(cur, collapse = "\n"))
-    }
-
-    data  <- dplyr::left_join(data, cur, by = "tp_num")
+  if (!getcurrents) {
+    RODBC::odbcClose(db)
+    return(data)
   }
+  
+  cur <- RODBC::sqlQuery(db, cquery)
+  if (is.character(cur)) {
+    RODBC::odbcClose(db)
+    stop(paste(cur, collapse = "\n"))
+  }
+  
+  data  <- dplyr::left_join(data, cur, by = "tp_num")
 
   RODBC::odbcClose(db)
   return(data)

@@ -45,7 +45,7 @@ shinyUI(fluidPage(
         textInput("Name", "Sample name contains (e.g., C-2)")
       ),
       wellPanel(
-        selectInput("xvar", "X-axis variable", axis_vars, selected = "merr"),
+        selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
         selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
       )
     ),

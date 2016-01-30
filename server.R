@@ -8,7 +8,7 @@ out <- filter(out,
                 is.na(q_flag), #Check for q_flag
                 sigma < 10, sigma > -10, #Select reasonable sigmas
                 normFm < 0.02, normFm > -0.02, #Select reasonable Fm
-                fmaxerr < 0.10
+                frep_err < 0.10
 )
 
 shinyServer(function(input, output, session) {
@@ -31,8 +31,8 @@ shinyServer(function(input, output, session) {
         as.Date(tp_date_pressed) <= as.Date(maxdate),
         gf_co2_qty >= minsize,
         gf_co2_qty <= maxsize,
-        fm_consensus >= minfm,
-        fm_consensus <= maxfm
+        fm_exp >= minfm,
+        fm_exp <= maxfm
       ) 
     #Filter primaries secondaries
     if (input$stdType == 1) { 
@@ -138,8 +138,8 @@ shinyServer(function(input, output, session) {
                  sd(z$normFm))
     
     e <- sprintf("Mean relative reported error of selected is %.4f SD %.4f", 
-                 mean(z$fmaxerr), 
-                 sd(z$fmaxerr))
+                 mean(z$frep_err), 
+                 sd(z$frep_err))
     
     HTML(paste(n, s, f, e, sep = '<br/>'))
     
