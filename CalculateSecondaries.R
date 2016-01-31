@@ -88,6 +88,7 @@ getStandards <- function (from, to = "present", sys = "both", getcurrents = TRUE
                     ", samples," target.tp_date_pressed > '",from,"'
                     ", ts, "
                     ", whid, "
+                    AND f_modern > -1
                   ")
 
   cquery <- paste("SELECT 
@@ -199,7 +200,8 @@ mungeStandards <- function(data, std) {
            system = ifelse(grepl("CFAMS", wheel_id), "CFAMS", "USAMS"),
            #fix CFAMS 12C
            le12c = ifelse(system == "USAMS", le12c * -1, le12c),
-           #is primary?
+           #is ox-i primary?
+           #primary1 = ((sample_type == "S") || (sample_type_1 == "S") && (grepl("OX-I", name)),
            primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S",
                             TRUE, 
                             ifelse(!is.na(sample_type) & sample_type == "S", 
