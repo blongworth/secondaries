@@ -13,6 +13,7 @@ se <- function(x) {
 
 sigma <- function(fmm, fmc, em, ec = 0) {
   #Calculate Sigma
+  #also known as a z-score
   (fmm - fmc) / sqrt(em^2 + ec^2)
 }
 
@@ -21,9 +22,13 @@ normFm <- function (fmm, fmc) {
   (fmm - fmc) / fmc
 }
 
-intrErr <- function(totErr, targErr) {
+intrErr <- function(popErr, targErr) {
   #calculate intrinsic error
-  ifelse (totErr < targErr, NA, sqrt(totErr^2 - targErr^2))
+  if (targErr > totErr) {
+     sqrt(popErr^2 - targErr^2)
+  } else {
+    NA
+  }
 }
 
 totErr <- function(targErr, intrErr) {
@@ -31,10 +36,78 @@ totErr <- function(targErr, intrErr) {
   sqrt(targErr^2 + intrErr^2)
 }
 
+getQCTable <- function(from, to = "present", sys = "both") {
+  #Get secondary data from qc table
+
+  #What system do we want data for?
+  if (sys == "cfams") {
+    whid <- "AND wheel LIKE 'C%'"
+  } else if (sys =="usams") {
+    whid <- "AND wheel LIKE 'U%'"
+  } else if (sys =="both") {
+    whid <- ""
+  } else {
+    whid <- "AND wheel NOT LIKE 'C%'"
+  }
+  
+  #Data to present or provided end date
+  if (to != "present") {
+    ts <- paste("AND target.tp_date_pressed < '", to,"' ")
+  } else {
+    ts <- ""
+  }
+  
+  dquery <- paste("
+   SELECT target.tp_num,
+         target.tp_date_pressed,
+         qc.target_time,
+         qc.rec_num,
+         qc.descr,
+         qc.tp_num,
+         qc.process,
+         qc.num,
+         qc.fm_consensus,
+         qc.f_modern,
+         qc.f_int_error,
+         qc.f_ext_error,
+         qc.co2_yield,
+         qc.perc_yield,
+         qc.gf_co2_qty,
+         qc.dc13_sample,
+         qc.dc13_measured,
+         qc.q_flag,
+         qc.dc13_con,
+         qc.ss,
+         qc.wheel,
+         qc.lab
+    FROM qc
+      INNER JOIN target ON qc.tp_num = target.tp_num
+   WHERE
+      target.tp_date_pressed > '",from,"'
+      ", ts, "
+      ", whid, "
+      --AND f_modern > -1
+ ")
+
+  #Do the queries
+  
+  db <- RODBC::odbcConnect(database, uid = uid, pwd = pwd)
+  
+  data <- RODBC::sqlQuery(db, dquery)
+  if (is.character(data)) {
+    RODBC::odbcClose(db)
+    stop(paste(data, collapse = "\n"))
+  }
+
+  RODBC::odbcClose(db)
+  return(data)
+
+}
+
 getStandards <- function (from, to = "present", sys = "both", getcurrents = TRUE, rec = NULL) { 
   #Get data for all secondaries from database
   #Return query result as data table
-  
+
   #get any rec_num if requested
   if (is.null(rec)) {
     samples  <- paste("INNER JOIN standards
@@ -201,11 +274,11 @@ mungeStandards <- function(data, std) {
            #fix CFAMS 12C
            le12c = ifelse(system == "USAMS", le12c * -1, le12c),
            #is ox-i primary?
-           #primary1 = ((sample_type == "S") || (sample_type_1 == "S") && (grepl("OX-I", name)),
-           primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S",
-                            TRUE, 
-                            ifelse(!is.na(sample_type) & sample_type == "S", 
-                                   TRUE, FALSE))) %>%
+           primary = (((sample_type == "S") | (sample_type_1 == "S")) & (grepl("OX-I", name)))) %>%
+           #primary = ifelse(!is.na(sample_type_1) & sample_type_1 == "S",
+            #                TRUE, 
+             #               ifelse(!is.na(sample_type) & sample_type == "S", 
+              #                     TRUE, FALSE))) %>%
     select(-target_name, -f_int_error, -f_ext_error, -sample_type, 
            -sample_type_1) %>%
     #number of splits?
