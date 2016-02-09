@@ -270,7 +270,7 @@ mungeStandards <- function(data, std) {
            sigma = sigma(f_modern, fm_exp, rep_err),
            frep_err = rep_err/f_modern, 
            #system
-           system = ifelse(grepl("CFAMS", wheel_id), "CFAMS", "USAMS"),
+           system = substring(wheel, 1, 5),
            #fix CFAMS 12C
            le12c = ifelse(system == "USAMS", le12c * -1, le12c),
            #is ox-i primary?
