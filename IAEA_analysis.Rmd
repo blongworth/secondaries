@@ -1,0 +1,110 @@
+---
+title: "Analysis of a secondary following Xiaomei 2010"
+author: "BEL"
+date: "01/11/2016"
+output: html_document
+---
+
+This script examines a secondary standard using the methods used in Xiaomei 
+Xu's 2010 paper, "Is the consensus value of ANU sucrose (IAEA C-6) too high".
+  
+Data pulled from no_os by rec_num.
+
+## Get the data
+
+```{r echo=FALSE, message=FALSE}
+#Load Libraries
+library(RODBC)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+
+digits=4
+#Load files
+source("~/R/dbconfig.R") #DB connection info
+source("CalculateSecondaries.R") #Functions
+
+#set parameters- from, to, sys not used if loading from file
+from <- '2014-09-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
+
+#Pull the data
+db <- odbcConnect(database, uid = uid, pwd = pwd)
+ss <- getSecondary(1086, from, to, sys, db)
+odbcClose(db)
+
+#add reported error
+ss <- mutate(ss, max_err = pmax(f_int_error, f_ext_error))
+```
+
+## Outlier tests
+
+Filter out the outliers using the two outlier tests from Rozanski et al. (1992).
+
+* Omit values $< H_L-3(H_U-H_L)$ or $> H_L+3(H_U-H_L)$ where $H_L$ and $H_U$
+are the lower and upper quartiles, respectively.
+
+* $|(Fm-m)/\sigma|<2$ where $Fm$ is the measurement, $m$ is the median after outliers are removed as above, and $\sigma$ is the reported error of the measurement.
+
+```{r outliers}
+# 1st outlier test
+q <- quantile(ss$f_modern, probs = c(.25, .75), names = FALSE)
+oh <- q[2]+3*(q[2]-q[1])
+ol <- q[1]-3*(q[2]-q[1])
+
+ss <- ss %>% filter( f_modern < oh,
+                     f_modern > ol)
+                     
+# second outlier test
+m <- median(ss$f_modern)
+ss <- ss %>% filter(abs((f_modern - m)/max_err) < 2)
+```
+
+Here's the data so far...
+
+```{r, echo=FALSE, message=FALSE}
+qplot(f_modern, data=ss)
+
+kable(select(ss, tp_num, tp_date_pressed, wheel_id, gf_co2_qty, f_modern, max_err))
+```
+
+## Consensus value estimation
+
+Using the method in Rozanski et al. (1992), consensus value is calculated as the weighted average ($X_w$) of the data remaining after removing outliers. The uncertainty is determined using the estimated standard error.
+```{r consensus}
+
+# weighted average function. Need to test this.
+weighted.average <- function(x, w) {
+  sum(x/w^2)/sum(1/w^2)
+}
+
+# estimated standard error
+ese <- function(x, w) {
+  n <- length(x)
+  x.m <- weighted.average(x, w)
+  e <- sqrt( sum((x-x.m)^2/w^2)/n)
+  
+e * sqrt(sum(1/w^2))
+}
+
+v <- sum(wt * (x - xm)^2)
+```
+
+```{r}
+#Make summary table
+syssum <- ss %>%
+  #group_by(system) %>%
+  summarize(
+    nFm = mean(f_modern),
+    nFm.s = sd(f_modern),
+    nFm.e = se(f_modern),
+    ferr = mean(max(f_int_error,f_ext_error)),
+    N = n()
+    )
+
+knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
+
+
+```
+
