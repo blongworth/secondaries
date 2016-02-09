@@ -21,10 +21,10 @@ source("~/R/dbconfig.R") #DB connection info
 source("CalculateSecondaries.R") #Functions
 
 #set parameters
-from <- '2014-09-01'
-to <- 'present' #present or date
+from <- '2015-01-01'
+to <-  '2015-12-31'#present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(40,300)
+size <- c(8.3,400)
 
 #Set digits for output
 options(digits=4)
@@ -46,25 +46,27 @@ First, lets filter out all primary standards from `r from` to `r to`, eliminatin
 ```{r}
 #Filter data
 stds <- filter(out, primary == TRUE, #use only normalizing ox-I
-               grepl("OX-I", name), 
                as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
                 lab_name == "OSG", #Use only samples from the SPL
+		f_modern > .1,
                 is.na(q_flag) #Check for q_flag
 		)
 
 #Make summary table
-stds %>%
+stds.sum <- stds %>%
 	group_by(system) %>%
-	summarize(
-                fm = mean(f_modern),
-                fm.sd = sd(f_modern),
-                rep_err = mean(rep_err),
-                N = length(f_modern))
+  summarize(
+    fm = mean(f_modern),
+    fm.sd = sd(f_modern),
+    err.rep = mean(rep_err),
+    sig.sd = sd(sigma),
+    #err.resid = intrErr(sd(f_modern), mean(rep_err)),
+    N = length(f_modern))
 
 
-#knitr::kable(prisum, digits = 4, caption = "Summary data for all primaries")
+knitr::kable(stds.sum, digits = 4, caption = "Summary data for all primaries")
 ```
 
 ## Filtering
@@ -95,18 +97,26 @@ stds.f <- stds %>% filter( f_modern < oh,
 m <- median(stds.f$f_modern)
 stds.f <- stds.f %>% filter(abs((f_modern - m)/rep_err) < 2)
 
-stds.f %>%
+#Make summary table
+stds.f.sum <- stds.f %>%
 	group_by(system) %>%
-	summarize(
-                fm = mean(f_modern),
-                fm.sd = sd(f_modern),
-                rep_err = mean(rep_err),
-                N = length(f_modern))
+  summarize(
+    fm = mean(f_modern),
+    fm.sd = sd(f_modern),
+    err.rep = mean(rep_err),
+    sig.sd = sd(sigma),
+    #err.resid = intrErr(sd(f_modern), mean(rep_err)),
+    N = length(f_modern))
 
+knitr::kable(stds.f.sum, digits = 4, caption = "Summary data for primaries without outliers")
 ```
+
 ## Weighted mean and deviation
 
 The IAEA/FIRI method then goes on to define methods for determination of weighted mean and SD.
+```{r}
+
+```
 
 ## Filtering by sigma and error
 
@@ -116,7 +126,7 @@ Alternatively, the effect of filtering can be seen interactively using the widge
 sliderInput("sigma", "Max Sigma",
             0, 12, value = 10)
 sliderInput("fme", "Max reported error",
-            0, 0.05, value = 0.05)
+            0, 0.01, value = 0.005)
 
 
 stds.r <- reactive({
@@ -137,10 +147,10 @@ renderTable({
   stds.r() %>%
     group_by(system) %>%
     summarize(
-      nFm = mean(normFm),
-      nFm.s = sd(normFm),
+      nFm = mean(f_modern),
+      nFm.s = sd(f_modern),
       sig = mean(sigma),
-      ferr = mean(frep_err),
+      rerr = mean(rep_err),
       N = n()
       )
   
@@ -160,7 +170,7 @@ sliderInput("bins", "number of histogram bins",
 
 # Underestimation of error in secondary standards
 
-Secondaries need to be weighted using their precision and normalized to the mean of the population. Do we need to normalize variance too?
+When secondaries are used to estimate the accuracy of measurement, we need a way of combining secondaries of varying fm. This requires that the value and variance of the measurements be normalized. Secondaries need to be weighted using their precision and normalized to the mean of the population. Do we need to normalize variance too?
 
 
 Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
@@ -190,6 +200,40 @@ All values of NaN are cases where $\sigma_{tot}<\sigma_{tgt}$, ie. the mean repo
 
 Intrinsic errors are calculated per-sample using the per-sample reported error, $\sigma_{tgt}$ and the standard deviation of all measurements of that secondary sorted by system.
 
+```{r}
+#Get secondaries from qc table
+
+qc <- getQCTable(from, to)
+
+#Filter data
+sec <- qc %>%
+  mutate(
+    system = substring(wheel, 1, 5),
+    rep_err = pmax(f_int_error, f_ext_error),
+    sigma = sigma(f_modern, fm_consensus, rep_err),
+    normFm = normFm(f_modern, fm_consensus)) %>%
+  filter(
+    gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
+    lab == "OSG", #Use only samples from the SPL
+    f_modern > .1,
+    #is.na(q_flag), #Check for q_flag
+    sigma < 10, sigma > -10) 
+
+#Make summary table
+summary(sec)
+sec.sum <- sec %>%
+	group_by(system) %>%
+  summarize(
+    fm = mean(normFm),
+    fm.sd = sd(normFm),
+    err.rep = mean(rep_err),
+    sig.sd = sd(sigma),
+    #err.resid = intrErr(sd(f_modern), mean(rep_err)),
+    N = length(f_modern))
+
+
+knitr::kable(sec.sum, digits = 4, caption = "Summary data for all secondaries")
+```
 ```{r psintrinsic, echo=FALSE, message=FALSE, warning=FALSE}
 
 #secsumu <- filter(secsum, system == "USAMS")
