@@ -1,13 +1,9 @@
+#!/usr/bin/r
 #getQCData
 #R script to get QC data from database and write it to a file
 
 #Load Libraries
-library(dplyr)
-library(RODBC)
-
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #set parameters
 from <- '2014-09-01'

@@ -16,11 +16,7 @@ Secondary standard analysis
 library(dplyr)
 library(ggplot2)
 library(knitr)
-library(RODBC)
-
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #set parameters
 from <- '2014-09-01'
