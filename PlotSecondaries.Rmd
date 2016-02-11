@@ -39,7 +39,7 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                lab_name == "OSG", #Use only samples from the SPL
+                lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
                 sigma < 10, sigma > -10, #Select reasonable sigmas
                 normFm < 0.02, normFm > -0.02, #Select reasonable Fm
@@ -91,7 +91,7 @@ knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
 secsum <- out.s %>% 
   group_by(name, system) %>%
   summarise(
-    fm.e = mean(fm_exp),
+    fm.e = mean(fm_consensus),
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
