@@ -43,13 +43,17 @@ First, lets filter out all primary standards from `r from` to `r to`, eliminatin
 ```{r}
 #Filter data
 stds <- filter(out, primary == TRUE, #use only normalizing ox-I
-               grepl("OX-I", name), 
+               grepl("OX-I", name), !grepl("OX-II", name),
                as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                lab_name == "OSG", #Use only samples from the SPL
+                lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag) #Check for q_flag
 		)
+
+# Calculate per-sample intrinsic error
+fm.sd <- sd(stds$f_modern)
+stds$interr <- sapply(stds$rep_err, intrErr, popErr = fm.sd)
 
 #Make summary table
 stds %>%
@@ -57,6 +61,8 @@ stds %>%
 	summarize(
                 fm = mean(f_modern),
                 fm.sd = sd(f_modern),
+                int.m = mean(interr, na.rm = TRUE),
+                int.sd = sd(interr, na.rm = TRUE),
                 rep_err = mean(rep_err),
                 N = length(f_modern))
 
@@ -92,12 +98,18 @@ stds.f <- stds %>% filter( f_modern < oh,
 m <- median(stds.f$f_modern)
 stds.f <- stds.f %>% filter(abs((f_modern - m)/rep_err) < 2)
 
+# Calculate per-sample intrinsic error
+fm.sd <- sd(stds.f$f_modern)
+stds.f$interr <- sapply(stds.f$rep_err, intrErr, popErr = fm.sd)
+
 stds.f %>%
 	group_by(system) %>%
 	summarize(
                 fm = mean(f_modern),
                 fm.sd = sd(f_modern),
                 rep_err = mean(rep_err),
+                int.m = mean(interr, na.rm = TRUE),
+                int.sd = sd(interr, na.rm = TRUE),
                 N = length(f_modern))
 
 ```
