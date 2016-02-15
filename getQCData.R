@@ -10,8 +10,14 @@ from <- '2014-09-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 
-#Get the data
-out <- getQCData(from, to, sys)
+#Get intcal data
+out <- getQCData(from, to, sys, getcurrents = FALSE)
+
+#Get Standards table data
+std <- getQCData(from, to, sys, intcal = FALSE, getcurrents = FALSE)
+
+#Get intcal data
+qc <- getQCData(from, to, sys, useQC = TRUE)
 
 #write to file
-save(out, file = "qcData.rda")
+save(out, std, qc,  file = "qcData.rda")

@@ -152,7 +152,6 @@ out.s() %>%
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
-    d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
     ferr = mean(frep_err),
