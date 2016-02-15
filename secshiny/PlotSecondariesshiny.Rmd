@@ -79,29 +79,19 @@ sliderInput("fme", "Max reported error",
 
 
 out.s <- reactive({
-    # Due to dplyr issue #318, we need temp variables for input values
-    mindate <- input$date[1]
-    maxdate <- input$date[2]
-    minsize <- input$size[1]
-    maxsize <- input$size[2]
-    minfm <- input$fm[1]
-    maxfm <- input$fm[2]
-    sig <- input$sigma
-    nfm <- input$nfm
-    fme <- input$fme
 
     # Apply filters
     out %>%
       filter(
-        as.Date(tp_date_pressed) >= as.Date(mindate),
-        as.Date(tp_date_pressed) <= as.Date(maxdate),
-        gf_co2_qty >= minsize,
-        gf_co2_qty <= maxsize,
-        fm_consensus >= minfm,
-        fm_consensus <= maxfm,
-        sigma < sig, sigma > -sig, #Select reasonable sigmas
-        normFm < nfm, normFm > -nfm, #Select reasonable Fm
-        frep_err < fme
+        as.Date(tp_date_pressed) >= as.Date(input$date[1]),
+        as.Date(tp_date_pressed) <= as.Date(input$date[2]),
+        gf_co2_qty >= input$size[1],
+        gf_co2_qty <= input$size[2],
+        fm_consensus >= input$fm[1],
+        fm_consensus <= input$fm[2],
+        abs(sigma) < input$sigma, #Select reasonable sigmas
+        abs(normFm) < input$nfm, #Select reasonable Fm
+        frep_err < input$fme
         )
 })
 
