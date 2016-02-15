@@ -17,11 +17,7 @@ Secondary standard analysis
 library(dplyr)
 library(ggplot2)
 library(knitr)
-library(RODBC)
-
-#Load files
-#source("~/R/dbconfig.R") #DB connection info
-#source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #Set digits for output
 options(digits=4)
@@ -34,17 +30,37 @@ load("./qcData.rda")
 
 out <- filter(out,
         primary == FALSE, #don't use normalizing ox-I
-        lab_name == "OSG", #Use only samples from the SPL
+        lab == "OSG", #Use only samples from the SPL
         is.na(q_flag) #Check for q_flag
 )
+```
+
+## Choose data
+
+Select data source.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+# out <- reactive({
+#   if (input$data == "qc") {
+#     getQCTable(from, to)
+#   } else if (input$data == "intcal") {
+#     out
+#   } else if (input$data == "standards") {
+#     stds
+#   }
+# })
 ```
 
 
 ## Filter data
 
-Use these widgets to filter secondary data as desired
+use these widgets to filter secondary data as desired
 
 ```{r echo = FALSE}
+selectInput('data',
+            label = 'Data Source', 
+            c("qc", "intcal", "standards"))
 dateRangeInput('date',
                label = 'Date Range',
                start = Sys.Date() - 90, 
@@ -81,8 +97,8 @@ out.s <- reactive({
         as.Date(tp_date_pressed) <= as.Date(maxdate),
         gf_co2_qty >= minsize,
         gf_co2_qty <= maxsize,
-        fm_exp >= minfm,
-        fm_exp <= maxfm,
+        fm_consensus >= minfm,
+        fm_consensus <= maxfm,
         sigma < sig, sigma > -sig, #Select reasonable sigmas
         normFm < nfm, normFm > -nfm, #Select reasonable Fm
         frep_err < fme
@@ -91,9 +107,9 @@ out.s <- reactive({
 
 ```
 
-Analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
 
-Normalized fm difference is defined as:
+normalized fm difference is defined as:
 
 $\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
 
@@ -133,7 +149,7 @@ renderTable({
 out.s() %>% 
   group_by(name, system) %>%
   summarise(
-    fm.e = mean(fm_exp),
+    fm.e = mean(fm_consensus),
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
@@ -163,7 +179,7 @@ sliderInput("bins", "number of histogram bins",
 
 # Boxplots
 
-Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
+boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
 
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 renderPlot({
