@@ -28,8 +28,17 @@ options(digits=4)
 #Load QC data from file
 load("./qcData.rda")
 
+std <- filter(std,
+        primary == FALSE, #don't use normalizing ox-I
+        lab == "OSG", #Use only samples from the SPL
+        is.na(q_flag) #Check for q_flag
+)
 out <- filter(out,
         primary == FALSE, #don't use normalizing ox-I
+        lab == "OSG", #Use only samples from the SPL
+        is.na(q_flag) #Check for q_flag
+)
+qc <- filter(qc,
         lab == "OSG", #Use only samples from the SPL
         is.na(q_flag) #Check for q_flag
 )
@@ -41,15 +50,6 @@ Select data source.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-# out <- reactive({
-#   if (input$data == "qc") {
-#     getQCTable(from, to)
-#   } else if (input$data == "intcal") {
-#     out
-#   } else if (input$data == "standards") {
-#     stds
-#   }
-# })
 ```
 
 
@@ -58,7 +58,7 @@ Select data source.
 use these widgets to filter secondary data as desired
 
 ```{r echo = FALSE}
-selectInput('data',
+selectInput('dataSource',
             label = 'Data Source', 
             c("qc", "intcal", "standards"))
 dateRangeInput('date',
@@ -77,9 +77,18 @@ sliderInput("nfm", "Max norm Fm",
 sliderInput("fme", "Max reported error",
             0, 0.05, value = 0.05)
 
+outdata <- reactive({
+  if (input$dataSource == "qc") {
+    qc
+  } else if (input$dataSource  == "intcal") {
+    out
+  } else if (input$dataSource  == "standards") {
+    std
+  }
+})
 
 out.s <- reactive({
-
+  out <- outdata()
     # Apply filters
     out %>%
       filter(
