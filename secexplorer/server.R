@@ -4,7 +4,7 @@ library(dplyr)
 #Load Secondaries data frame
 load("./qcData.rda")
 
-out <- filter(out, 
+out <- filter(std, 
                 is.na(q_flag), #Check for q_flag
                 sigma < 10, sigma > -10, #Select reasonable sigmas
                 normFm < 0.02, normFm > -0.02, #Select reasonable Fm
@@ -15,25 +15,19 @@ shinyServer(function(input, output, session) {
 
   # Filter the secondaries
   secondaries <- reactive({
-    # Due to dplyr issue #318, we need temp variables for input values
-    system <- input$system
-    mindate <- input$date[1]
-    maxdate <- input$date[2]
-    minsize <- input$size[1]
-    maxsize <- input$size[2]
-    minfm <- input$fm[1]
-    maxfm <- input$fm[2]
-    
+
     # Apply filters
     m <- out %>%
       filter(
-        as.Date(tp_date_pressed) >= as.Date(mindate),
-        as.Date(tp_date_pressed) <= as.Date(maxdate),
-        gf_co2_qty >= minsize,
-        gf_co2_qty <= maxsize,
-        fm_exp >= minfm,
-        fm_exp <= maxfm
-      ) 
+        as.Date(tp_date_pressed) >= as.Date(input$date[1]),
+        as.Date(tp_date_pressed) <= as.Date(input$date[2]),
+        gf_co2_qty >= input$size[1],
+        gf_co2_qty <= input$size[2]#,
+        #abs(sigma) < input$sigma, 
+        #abs(normFm) < input$nfm, 
+        #rep_err < input$fme
+      )
+
     #Filter primaries secondaries
     if (input$stdType == 1) { 
       m <- m %>% filter(primary == TRUE) #rec_num == 113385
@@ -43,12 +37,11 @@ shinyServer(function(input, output, session) {
     }
     #Filter by graphite lab
     if (input$lab == 1) { 
-      m <- m %>% filter(lab_name == "OSG")
+      m <- m %>% filter(lab == "OSG")
     }
     if (input$lab == 2) { 
-      m <- m %>% filter(lab_name == "WAT")
+      m <- m %>% filter(lab == "WAT")
     }
-    
     # filter by system
     if (input$system != "both") {
       sys <- paste0(input$system)
@@ -66,15 +59,9 @@ shinyServer(function(input, output, session) {
     if (input$splits == 2) { 
       m <- m %>% filter(splits == 1)
     }
-    
-    m <- as.data.frame(m)
 
-#     # Add column which says whether the movie won any Oscars
-#     # Be a little careful in case we have a zero-row data frame
-#     m$has_oscar <- character(nrow(m))
-#     m$has_oscar[m$Oscars == 0] <- "No"
-#     m$has_oscar[m$Oscars >= 1] <- "Yes"
-    m
+    as.data.frame(m)
+
   })
 
 #   # Function for generating tooltip text
@@ -100,8 +87,6 @@ shinyServer(function(input, output, session) {
     xvar_name <- names(axis_vars)[axis_vars == input$xvar]
     yvar_name <- names(axis_vars)[axis_vars == input$yvar]
 
-    # Normally we could do something like props(x = ~BoxOffice, y = ~Reviews),
-    # but since the inputs are strings, we need to do a little more work.
     xvar <- prop("x", as.symbol(input$xvar))
     yvar <- prop("y", as.symbol(input$yvar))
 
@@ -113,15 +98,10 @@ shinyServer(function(input, output, session) {
       add_tooltip(secondary_tooltip, "hover") %>%
       add_axis("x", title = xvar_name) %>%
       add_axis("y", title = yvar_name) %>%
-      #add_legend("stroke", title = "Won Oscar", values = c("Yes", "No")) %>%
-      #scale_nominal("stroke", domain = c("Yes", "No"),
-      #  range = c("orange", "#aaa")) %>%
       set_options(width = 500, height = 500)
   })
 
   vis %>% bind_shiny("plot1")
-
-  #output$n_secondaries <- renderText({ nrow(secondaries()) })
 
   output$stdData <- renderUI({ 
     
