@@ -11,12 +11,12 @@ to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 
 #Get intcal data
-out <- getQCData(from, to, sys, getcurrents = FALSE)
+out <- getQCData(from, to, sys, getcurrents = TRUE)
 
 #Get Standards table data
-std <- getQCData(from, to, sys, intcal = FALSE, getcurrents = FALSE)
+std <- getQCData(from, to, sys, intcal = FALSE, getcurrents = TRUE)
 
-#Get intcal data
+#Get qc data
 qc <- getQCData(from, to, sys, useQC = TRUE)
 
 #write to file
