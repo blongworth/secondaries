@@ -2,7 +2,7 @@ library(ggvis)
 library(dplyr)
 
 #Load Secondaries data frame
-load("./qcData.rda")
+load("../qcData.rda")
 
 out <- filter(std, 
                 is.na(q_flag), #Check for q_flag
