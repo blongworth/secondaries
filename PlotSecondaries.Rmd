@@ -19,10 +19,10 @@ library(knitr)
 library(amstools)
 
 #set parameters
-from <- '2014-09-01'
-to <- 'present' #present or date
+from <- '2015-01-01'
+to <- '2016-01-01' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(40,300)
+size <- c(8,300)
 
 #Set digits for output
 options(digits=4)
@@ -41,8 +41,8 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
                 lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
-                sigma < 10, sigma > -10, #Select reasonable sigmas
-                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+                abs(sigma) < 3, #Select reasonable sigmas
+                abs(normFm) < 0.02, #Select reasonable Fm
                 frep_err < 0.10
               )
 ```
@@ -73,7 +73,9 @@ syssum <- out.s %>%
     nFm.s = sd(normFm),
     nFm.e = se(normFm),
     sig = mean(sigma),
+    sig.sd = sd(sigma),
     ferr = mean(frep_err),
+    intrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     N = n()
     )
 
@@ -96,12 +98,13 @@ secsum <- out.s %>%
     fm.s = sd(f_modern),
     err = mean(rep_err),
     intrerr = intrErr(sd(f_modern), mean(rep_err)),
+    intrerr = mean(intrErr(f_modern, frep_err), na.rm=TRUE),
     d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
     nFm.e = se(normFm),
     ferr = mean(frep_err),
-    fintrerr = intrErr(sd(normFm), mean(frep_err)),
+    fintrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     sig = mean(sigma),
     sig.s = sd(sigma),
     N = n()
@@ -129,7 +132,10 @@ Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 
 #sigma boxplots
-p <- ggplot(out.s, aes(name, sigma, color=process)) + geom_hline(yintercept=0) + 
+p <- ggplot(out.s, aes(name, sigma, color=process)) +
+  geom_hline(yintercept=0) + 
+  geom_hline(yintercept=1) + 
+  geom_hline(yintercept=-1) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
   ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +

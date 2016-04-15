@@ -2,13 +2,13 @@
 
 #R -f getQCData.R
 
-cp ./qcserver/server.R ui.R global.R /srv/shiny-server/qcserver
+cp ./secexplorer/server.R ./secexplorer/ui.R ./secexplorer/global.R /srv/shiny-server/qcserver
 chmod 755 /srv/shiny-server/qcserver/*
 
-cp PlotSecondariesshiny.Rmd /srv/shiny-server/secondaries/index.Rmd
+cp ./secshiny/PlotSecondariesshiny.Rmd /srv/shiny-server/secondaries/index.Rmd
 chmod 755 /srv/shiny-server/secondaries/*
 
-cp ./showsinglesec/server.R ui.R /srv/shiny-server/secserver
+cp ./showsinglesec/server.R ./showsinglesec/ui.R /srv/shiny-server/secserver
 chmod 755 /srv/shiny-server/secserver/*
 
 cp ./qcData.rda /srv/shiny-server/

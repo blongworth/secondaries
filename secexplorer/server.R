@@ -19,8 +19,8 @@ shinyServer(function(input, output, session) {
     # Apply filters
     m <- out %>%
       filter(
-        as.Date(tp_date_pressed) >= as.Date(input$date[1]),
-        as.Date(tp_date_pressed) <= as.Date(input$date[2]),
+        tp_date_pressed >= input$date[1],
+        tp_date_pressed <= input$date[2],
         gf_co2_qty >= input$size[1],
         gf_co2_qty <= input$size[2]#,
         #abs(sigma) < input$sigma, 

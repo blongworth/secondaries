@@ -78,13 +78,10 @@ sliderInput("fme", "Max reported error",
             0, 0.05, value = 0.05)
 
 outdata <- reactive({
-  if (input$dataSource == "qc") {
-    qc
-  } else if (input$dataSource  == "intcal") {
-    out
-  } else if (input$dataSource  == "standards") {
-    std
-  }
+    switch(input$dataSource,
+           "qc" = qc,
+           "intcal" = out,
+           "standards" = std)
 })
 
 out.s <- reactive({
@@ -92,8 +89,8 @@ out.s <- reactive({
     # Apply filters
     out %>%
       filter(
-        as.Date(tp_date_pressed) >= as.Date(input$date[1]),
-        as.Date(tp_date_pressed) <= as.Date(input$date[2]),
+        tp_date_pressed >= input$date[1],
+        tp_date_pressed <= input$date[2],
         gf_co2_qty >= input$size[1],
         gf_co2_qty <= input$size[2],
         fm_consensus >= input$fm[1],
