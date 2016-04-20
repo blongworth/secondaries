@@ -19,8 +19,8 @@ library(knitr)
 library(amstools)
 
 #set parameters
-from <- '2015-01-01'
-to <- '2016-01-01' #present or date
+from <- '2014-09-01'
+to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(8,300)
 
@@ -36,13 +36,13 @@ load("qcData.rda")
 #Filter data
 out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
                 f_modern > .1, f_modern < 1.6,
-                as.Date(tp_date_pressed) >= as.Date(from),
-                as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
+                tp_date_pressed >= as.Date(from),
+                tp_date_pressed <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
                 lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
-                abs(sigma) < 3, #Select reasonable sigmas
-                abs(normFm) < 0.02, #Select reasonable Fm
+                abs(sigma) < 10, #Select reasonable sigmas
+                abs(normFm) < 0.03, #Select reasonable Fm
                 frep_err < 0.10
               )
 ```
@@ -97,8 +97,7 @@ secsum <- out.s %>%
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
-    intrerr = intrErr(sd(f_modern), mean(rep_err)),
-    intrerr = mean(intrErr(f_modern, frep_err), na.rm=TRUE),
+    intrerr = mean(intrErr(f_modern, rep_err), na.rm=TRUE),
     d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
@@ -221,11 +220,19 @@ ggplot(out.s, aes(gf_co2_qty)) + geom_histogram() +
 
 ```{r sigmavsco2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 p <- qplot(gf_co2_qty, sigma, color=system, data=out.s)
-p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
   ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
 
 p <- qplot(gf_co2_qty, normFm, color=system, data=out.s)
-p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
   ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
 ```
 
@@ -247,4 +254,14 @@ p + geom_hline(yintercept=0) + geom_point() + geom_smooth() +
 p <- qplot(tp_date_pressed, normFm, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
   ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+
 ```
