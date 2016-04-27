@@ -31,17 +31,37 @@ Here's the data...
 ```{r, echo=FALSE, message=FALSE}
 ss <- mutate(ss, system = substring(wheel, 1, 5))
 qplot(f_modern, data=ss) + facet_grid(system ~ .)
+```
 
+If we remove the high outliers, the distribution looks like the following table.
+
+```{r}
 ss <- filter(ss, f_modern > 0, f_modern < 0.008)
-kable(select(ss, tp_num, tp_date_pressed, gf_co2_qty, f_modern, f_int_error, f_ext_error))
 
 sum <- ss %>% 
-  select(tp_num, tp_date_pressed, system, gf_co2_qty, f_modern, f_int_error, f_ext_error) %>%
+  select(tp_num,
+         tp_date_pressed,
+         system,
+         gf_co2_qty,
+         f_modern,
+         merr = pmax(f_int_error, f_ext_error)) %>%
   group_by(system) %>%
-  summarize(fm = mean(f_modern), sd = sd(f_modern), err = mean(pmax(f_int_error, f_ext_error)), N = n())
+  summarize(fm = mean(f_modern),
+            sd = sd(f_modern), 
+            err = mean(merr),
+            N = n())
 
 kable(sum)
 ```
 
-That leaves us with N = `r nrow(ss)`, mean = `r mean(ss$f_modern)`, sd = `r sd(ss$f_modern)`.
+Here's the data used for this analysis.
 
+```{r}
+kable(select(ss,
+             tp_num,
+             tp_date_pressed,
+             gf_co2_qty,
+             f_modern,
+             pmax(f_int_error, f_ext_error)) %>%
+      arrange(tp_date_pressed))
+```

@@ -10,15 +10,12 @@ Determination of mean fm and error for NOSAMS2/Weidman Mollusk Standard rec 3880
 Data pulled from no_os by rec_num.
 ```{r echo=FALSE, message=FALSE}
 #Load Libraries
-library(RODBC)
+library(amstools)
 library(ggplot2)
 library(dplyr)
 library(knitr)
 
 digits=4
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
 
 #set parameters- from, to, sys not used if loading from file
 from <- '2014-09-01'
@@ -26,11 +23,8 @@ to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 
 #Pull the data
-db <- odbcConnect(database, uid = uid, pwd = pwd)
-ss <- getSecondary(38809, from, to, sys, db)
-odbcClose(db)
+ss <- getStandards(from, to, sys, rec = 38809)
 ```
-
 Filter out the outliers.
 
 ```{r}
@@ -42,13 +36,12 @@ Here's the data...
 ```{r, echo=FALSE, message=FALSE}
 qplot(f_modern, data=ss)
 
-kable(select(ss, tp_num, tp_date_pressed, wheel_id, gf_co2_qty, f_modern, f_int_error, f_ext_error))
+kable(select(ss, tp_num, tp_date_pressed, wheel, gf_co2_qty, f_modern, f_int_error, f_ext_error))
 ```
 
 
 That leaves us with N = `r nrow(ss)`, mean = `r mean(ss$f_modern)`, sd = `r sd(ss$f_modern)` se.
 ```{r}
-SUMMARY TABLE:w
 
 
 ```
