@@ -42,7 +42,7 @@ First, lets filter out all primary standards from `r from` to `r to`, eliminatin
 
 ```{r}
 #Filter data
-stds <- filter(out, primary == TRUE, #use only normalizing ox-I
+stds <- filter(std, primary == TRUE, #use only normalizing ox-I
                grepl("OX-I", name), !grepl("OX-II", name),
                as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
@@ -51,9 +51,6 @@ stds <- filter(out, primary == TRUE, #use only normalizing ox-I
                 is.na(q_flag) #Check for q_flag
 		)
 
-# Calculate per-sample intrinsic error
-fm.sd <- sd(stds$f_modern)
-stds$interr <- sapply(stds$rep_err, intrErr, popErr = fm.sd)
 
 #Make summary table
 stds %>%
@@ -61,8 +58,8 @@ stds %>%
 	summarize(
                 fm = mean(f_modern),
                 fm.sd = sd(f_modern),
-                int.m = mean(interr, na.rm = TRUE),
-                int.sd = sd(interr, na.rm = TRUE),
+                int.m = mean(intrErr(f_modern, rep_err), na.rm = TRUE),
+                int.sd = sd(intrErr(f_modern, rep_err), na.rm = TRUE),
                 rep_err = mean(rep_err),
                 N = length(f_modern))
 
@@ -98,9 +95,6 @@ stds.f <- stds %>% filter( f_modern < oh,
 m <- median(stds.f$f_modern)
 stds.f <- stds.f %>% filter(abs((f_modern - m)/rep_err) < 2)
 
-# Calculate per-sample intrinsic error
-fm.sd <- sd(stds.f$f_modern)
-stds.f$interr <- sapply(stds.f$rep_err, intrErr, popErr = fm.sd)
 
 stds.f %>%
 	group_by(system) %>%
@@ -108,63 +102,62 @@ stds.f %>%
                 fm = mean(f_modern),
                 fm.sd = sd(f_modern),
                 rep_err = mean(rep_err),
-                int.m = mean(interr, na.rm = TRUE),
-                int.sd = sd(interr, na.rm = TRUE),
+                int.m = mean(intrErr(f_modern, rep_err), na.rm = TRUE),
+                int.sd = sd(intrErr(f_modern, rep_err), na.rm = TRUE),
                 N = length(f_modern))
 
 ```
 ## Weighted mean and deviation
 
-The IAEA/FIRI method then goes on to define methods for determination of weighted mean and SD.
+The IAEA/FIRI method then goes on to define methods for determination of 
+weighted mean and SD.
 
-## Filtering by sigma and error
+## Intrinsic Error
 
-Alternatively, the effect of filtering can be seen interactively using the widgets below.
+The intrinsic or residual error is the "extra" error in an analysis that 
+explains the difference between the measurement error on a single analysis 
+and the variance when many samples of the same population are run separately. 
 
-```{r echo = FALSE}
-sliderInput("sigma", "Max Sigma",
-            0, 12, value = 10)
-sliderInput("fme", "Max reported error",
-            0, 0.05, value = 0.05)
+The error terms may be added in quadrature as follows:
+
+$\sigma_{tot}=\sqrt{\sigma_{tgt}^2+\sigma_{int}^2}$
+
+where $\sigma_{tot}$ is the total error of a measurement, $\sigma_{int}$ is
+the "intrinsic" error,  and $\sigma_{tgt}$ is the "reported" or per-target 
+error. $\sigma_{tot}$ is assumed to be the standard deviation of measurements
+of a secondary, and the mean of reported errors for a secondary is used for
+$\sigma_{tgt}$.
+
+When population variance (total expected error) and error on a measurement are
+known, intrinsic error is calculated as follows:
+
+$\sigma_{int}=\sqrt{\sigma_{tot}^2-\sigma_{tgt}^2}$
+
+When $\sigma_{tgt}>\sigma_{tot}$, ie. the mean reported error is greater than
+the actual population error, we can't derive a negative intrisic error, so
+it's unclear how these cases should be used in calculating  the intrinsic
+error to be added to unknowns. For now, these cases are assigned an error of
+NA.
+
+### Intrinsic Error in primary standards
+
+Primaries seem like a good place to start, since they're the most often run
+target, and the population mean is well known (defined to be 1.0398, with a
+very small error). Additionally, there are enough on every wheel to determine
+a per-wheel intrinsic error term.
+
+```{r intstds}
 
 
-stds.r <- reactive({
-    # Due to dplyr issue #318, we need temp variables for input values
-    sig <- input$sigma
-    fme <- input$fme
+#intrisic error for all standards
+	summarize(stds,
+                fm = mean(f_modern),
+                fm.sd = sd(f_modern),
+                rep_err = mean(rep_err),
+                int.m = mean(intrErr(f_modern, rep_err), na.rm = TRUE),
+                int.sd = sd(intrErr(f_modern, rep_err), na.rm = TRUE),
+                N = length(f_modern))
 
-    # Apply filters
-    stds %>%
-      filter(
-        sigma < sig, sigma > -sig, #Select reasonable sigmas
-        rep_err < fme
-        )
-})
-
-renderTable({
-  #Make summary table
-  stds.r() %>%
-    group_by(system) %>%
-    summarize(
-      nFm = mean(normFm),
-      nFm.s = sd(normFm),
-      sig = mean(sigma),
-      ferr = mean(frep_err),
-      N = n()
-      )
-  
-}, digits = 4)
-
-# Histograms
-
-renderPlot({
-ggplot(stds.r(), aes(sigma)) + 
-  geom_histogram(bins = input$bins) + 
-  facet_grid(system ~ .) + 
-  ggtitle(paste("Sigma Histogram"))
-})
-sliderInput("bins", "number of histogram bins",
-            1, 100, value = 30)
 ```
 
 # Underestimation of error in secondary standards
@@ -183,14 +176,6 @@ $\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
 where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 
 ## By Secondary and System
-
-Calculations of intrinsic error are added in below. "Intrerr" is the intrinsic error for data without normalizing Fm, and fintrerr is the intrinsic error calclulated for normalized data. Intrinsic error is calculated as follows:
-
-$\sigma_{int}=\sqrt{\sigma_{tot}^2-\sigma_{tgt}^2}$
-
-where $\sigma_{int}$ is the "intrinsic" error, $\sigma_{tot}$ is the total error and $\sigma_{tgt}$ is the "reported" or per-target error. $\sigma_{tot}$ is assumed to be the standard deviation of measurements of a secondary, and the mean of reported errors for a secondary is used for $\sigma_{tgt}$.
-
-All values of NaN are cases where $\sigma_{tot}<\sigma_{tgt}$, ie. the mean reported error is greater than the actual population error.
 
 
 # Calculating intrinsic error on a per sample basis
