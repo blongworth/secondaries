@@ -17,11 +17,7 @@ Secondary standard analysis
 library(dplyr)
 library(ggplot2)
 library(knitr)
-library(RODBC)
-
-#Load files
-#source("~/R/dbconfig.R") #DB connection info
-#source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #Set digits for output
 options(digits=4)
@@ -30,21 +26,41 @@ options(digits=4)
 #out <- getQCData(from, to, sys)
 
 #Load QC data from file
-load("./qcData.rda")
+load("../qcData.rda")
 
-out <- filter(out,
+std <- filter(std,
         primary == FALSE, #don't use normalizing ox-I
-        lab_name == "OSG", #Use only samples from the SPL
+        lab == "OSG", #Use only samples from the SPL
         is.na(q_flag) #Check for q_flag
 )
+out <- filter(out,
+        primary == FALSE, #don't use normalizing ox-I
+        lab == "OSG", #Use only samples from the SPL
+        is.na(q_flag) #Check for q_flag
+)
+qc <- filter(qc,
+        lab == "OSG", #Use only samples from the SPL
+        is.na(q_flag) #Check for q_flag
+)
+```
+
+## Choose data
+
+Select data source.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
 ```
 
 
 ## Filter data
 
-Use these widgets to filter secondary data as desired
+use these widgets to filter secondary data as desired
 
 ```{r echo = FALSE}
+selectInput('dataSource',
+            label = 'Data Source', 
+            c("qc", "intcal", "standards"))
 dateRangeInput('date',
                label = 'Date Range',
                start = Sys.Date() - 90, 
@@ -61,39 +77,35 @@ sliderInput("nfm", "Max norm Fm",
 sliderInput("fme", "Max reported error",
             0, 0.05, value = 0.05)
 
+outdata <- reactive({
+    switch(input$dataSource,
+           "qc" = qc,
+           "intcal" = out,
+           "standards" = std)
+})
 
 out.s <- reactive({
-    # Due to dplyr issue #318, we need temp variables for input values
-    mindate <- input$date[1]
-    maxdate <- input$date[2]
-    minsize <- input$size[1]
-    maxsize <- input$size[2]
-    minfm <- input$fm[1]
-    maxfm <- input$fm[2]
-    sig <- input$sigma
-    nfm <- input$nfm
-    fme <- input$fme
-
+  out <- outdata()
     # Apply filters
     out %>%
       filter(
-        as.Date(tp_date_pressed) >= as.Date(mindate),
-        as.Date(tp_date_pressed) <= as.Date(maxdate),
-        gf_co2_qty >= minsize,
-        gf_co2_qty <= maxsize,
-        fm_exp >= minfm,
-        fm_exp <= maxfm,
-        sigma < sig, sigma > -sig, #Select reasonable sigmas
-        normFm < nfm, normFm > -nfm, #Select reasonable Fm
-        frep_err < fme
+        tp_date_pressed >= input$date[1],
+        tp_date_pressed <= input$date[2],
+        gf_co2_qty >= input$size[1],
+        gf_co2_qty <= input$size[2],
+        fm_consensus >= input$fm[1],
+        fm_consensus <= input$fm[2],
+        abs(sigma) < input$sigma, #Select reasonable sigmas
+        abs(normFm) < input$nfm, #Select reasonable Fm
+        frep_err < input$fme
         )
 })
 
 ```
 
-Analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
 
-Normalized fm difference is defined as:
+normalized fm difference is defined as:
 
 $\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
 
@@ -133,11 +145,10 @@ renderTable({
 out.s() %>% 
   group_by(name, system) %>%
   summarise(
-    fm.e = mean(fm_exp),
+    fm.e = mean(fm_consensus),
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
-    d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
     ferr = mean(frep_err),
@@ -163,7 +174,7 @@ sliderInput("bins", "number of histogram bins",
 
 # Boxplots
 
-Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
+boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
 
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 renderPlot({

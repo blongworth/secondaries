@@ -16,17 +16,13 @@ Secondary standard analysis
 library(dplyr)
 library(ggplot2)
 library(knitr)
-library(RODBC)
-
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #set parameters
 from <- '2014-09-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(40,300)
+size <- c(8,300)
 
 #Set digits for output
 options(digits=4)
@@ -40,13 +36,13 @@ load("qcData.rda")
 #Filter data
 out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
                 f_modern > .1, f_modern < 1.6,
-                as.Date(tp_date_pressed) >= as.Date(from),
-                as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
+                tp_date_pressed >= as.Date(from),
+                tp_date_pressed <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                lab_name == "OSG", #Use only samples from the SPL
+                lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
-                sigma < 10, sigma > -10, #Select reasonable sigmas
-                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+                abs(sigma) < 10, #Select reasonable sigmas
+                abs(normFm) < 0.03, #Select reasonable Fm
                 frep_err < 0.10
               )
 ```
@@ -77,7 +73,9 @@ syssum <- out.s %>%
     nFm.s = sd(normFm),
     nFm.e = se(normFm),
     sig = mean(sigma),
+    sig.sd = sd(sigma),
     ferr = mean(frep_err),
+    intrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     N = n()
     )
 
@@ -95,17 +93,17 @@ knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
 secsum <- out.s %>% 
   group_by(name, system) %>%
   summarise(
-    fm.e = mean(fm_exp),
+    fm.e = mean(fm_consensus),
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
-    intrerr = intrErr(sd(f_modern), mean(rep_err)),
+    intrerr = mean(intrErr(f_modern, rep_err), na.rm=TRUE),
     d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
     nFm.e = se(normFm),
     ferr = mean(frep_err),
-    fintrerr = intrErr(sd(normFm), mean(frep_err)),
+    fintrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     sig = mean(sigma),
     sig.s = sd(sigma),
     N = n()
@@ -133,7 +131,10 @@ Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st
 ```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 
 #sigma boxplots
-p <- ggplot(out.s, aes(name, sigma, color=process)) + geom_hline(yintercept=0) + 
+p <- ggplot(out.s, aes(name, sigma, color=process)) +
+  geom_hline(yintercept=0) + 
+  geom_hline(yintercept=1) + 
+  geom_hline(yintercept=-1) + 
   geom_boxplot() + geom_jitter()
 p + facet_grid(system ~ .) + 
   ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +
@@ -219,11 +220,19 @@ ggplot(out.s, aes(gf_co2_qty)) + geom_histogram() +
 
 ```{r sigmavsco2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 p <- qplot(gf_co2_qty, sigma, color=system, data=out.s)
-p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
   ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
 
 p <- qplot(gf_co2_qty, normFm, color=system, data=out.s)
-p + geom_hline(yintercept=0) + geom_point() + #geom_smooth(method="lm") + 
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
   ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
 ```
 
@@ -245,4 +254,14 @@ p + geom_hline(yintercept=0) + geom_point() + geom_smooth() +
 p <- qplot(tp_date_pressed, normFm, color=system, data=out.s)
 p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
   ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+
 ```

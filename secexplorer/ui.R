@@ -28,29 +28,18 @@ shinyUI(fluidPage(
                     1, 500, value = c(40,300)),
         sliderInput("fm", "Fm Range",
                     0, 2, value = c(.1,1.6), step = 0.05),
-        #checkboxInput("splits", label = "Include split samples?", value = TRUE),
         radioButtons("splits", "Split targets",
                      c("Split" = 1, "Unsplit" = 2, "Both" = 3),
                      selected = 3),
-#         checkboxGroupInput("splits", label = h3("Number of Targets (Splits)"), 
-#                            choices = list("1" = 1, "2" = 2, "3" = 3, "4" = 4),
-#                            selected = c(1,2,3,4),
-#                            inline = TRUE),
-#         selectInput("rec", "Receipt Number",
-#           c("All", "Action", "Adventure", "Animation", "Biography", "Comedy",
-#             "Crime", "Documentary", "Drama", "Family", "Fantasy", "History",
-#             "Horror", "Music", "Musical", "Mystery", "Romance", "Sci-Fi",
-#             "Short", "Sport", "Thriller", "War", "Western")
-#         ),
         textInput("Name", "Sample name contains (e.g., C-2)")
-      ),
-      wellPanel(
-        selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
-        selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
       )
     ),
     column(9,
       ggvisOutput("plot1"),
+      wellPanel(
+        selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
+        selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
+      ),
       wellPanel(
         htmlOutput("stdData")
       )

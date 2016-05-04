@@ -15,10 +15,7 @@ library(dplyr)
 library(ggplot2)
 library(knitr)
 library(shiny)
-
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
+library(amstools)
 
 #set parameters
 from <- '2015-01-01'
@@ -45,25 +42,27 @@ First, lets filter out all primary standards from `r from` to `r to`, eliminatin
 
 ```{r}
 #Filter data
-stds <- filter(out, primary == TRUE, #use only normalizing ox-I
+stds <- filter(std, primary == TRUE, #use only normalizing ox-I
+               grepl("OX-I", name), !grepl("OX-II", name),
                as.Date(tp_date_pressed) >= as.Date(from),
                 as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
-                lab_name == "OSG", #Use only samples from the SPL
+                lab == "OSG", #Use only samples from the SPL
 		f_modern > .1,
                 is.na(q_flag) #Check for q_flag
 		)
 
+
 #Make summary table
 stds.sum <- stds %>%
 	group_by(system) %>%
-  summarize(
-    fm = mean(f_modern),
-    fm.sd = sd(f_modern),
-    err.rep = mean(rep_err),
-    sig.sd = sd(sigma),
-    #err.resid = intrErr(sd(f_modern), mean(rep_err)),
-    N = length(f_modern))
+	summarize(
+                fm = mean(f_modern),
+                fm.sd = sd(f_modern),
+                int.m = mean(intrErr(f_modern, rep_err), na.rm = TRUE),
+                int.sd = sd(intrErr(f_modern, rep_err), na.rm = TRUE),
+                rep_err = mean(rep_err),
+                N = length(f_modern))
 
 
 knitr::kable(stds.sum, digits = 4, caption = "Summary data for all primaries")
@@ -168,6 +167,59 @@ sliderInput("bins", "number of histogram bins",
             1, 100, value = 30)
 ```
 
+
+The IAEA/FIRI method then goes on to define methods for determination of 
+weighted mean and SD.
+
+## Intrinsic Error
+
+The intrinsic or residual error is the "extra" error in an analysis that 
+explains the difference between the measurement error on a single analysis 
+and the variance when many samples of the same population are run separately. 
+
+The error terms may be added in quadrature as follows:
+
+$\sigma_{tot}=\sqrt{\sigma_{tgt}^2+\sigma_{int}^2}$
+
+where $\sigma_{tot}$ is the total error of a measurement, $\sigma_{int}$ is
+the "intrinsic" error,  and $\sigma_{tgt}$ is the "reported" or per-target 
+error. $\sigma_{tot}$ is assumed to be the standard deviation of measurements
+of a secondary, and the mean of reported errors for a secondary is used for
+$\sigma_{tgt}$.
+
+When population variance (total expected error) and error on a measurement are
+known, intrinsic error is calculated as follows:
+
+$\sigma_{int}=\sqrt{\sigma_{tot}^2-\sigma_{tgt}^2}$
+
+When $\sigma_{tgt}>\sigma_{tot}$, ie. the mean reported error is greater than
+the actual population error, we can't derive a negative intrisic error, so
+it's unclear how these cases should be used in calculating  the intrinsic
+error to be added to unknowns. For now, these cases are assigned an error of
+NA.
+
+### Intrinsic Error in primary standards
+
+Primaries seem like a good place to start, since they're the most often run
+target, and the population mean is well known (defined to be 1.0398, with a
+very small error). Additionally, there are enough on every wheel to determine
+a per-wheel intrinsic error term.
+
+```{r intstds}
+
+
+#intrisic error for all standards
+	summarize(stds,
+                fm = mean(f_modern),
+                fm.sd = sd(f_modern),
+                rep_err = mean(rep_err),
+                int.m = mean(intrErr(f_modern, rep_err), na.rm = TRUE),
+                int.sd = sd(intrErr(f_modern, rep_err), na.rm = TRUE),
+                N = length(f_modern))
+
+>>>>>>> use_amstools
+```
+
 # Underestimation of error in secondary standards
 
 When secondaries are used to estimate the accuracy of measurement, we need a way of combining secondaries of varying fm. This requires that the value and variance of the measurements be normalized. Secondaries need to be weighted using their precision and normalized to the mean of the population. Do we need to normalize variance too?
@@ -184,14 +236,6 @@ $\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
 where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 
 ## By Secondary and System
-
-Calculations of intrinsic error are added in below. "Intrerr" is the intrinsic error for data without normalizing Fm, and fintrerr is the intrinsic error calclulated for normalized data. Intrinsic error is calculated as follows:
-
-$\sigma_{int}=\sqrt{\sigma_{tot}^2-\sigma_{tgt}^2}$
-
-where $\sigma_{int}$ is the "intrinsic" error, $\sigma_{tot}$ is the total error and $\sigma_{tgt}$ is the "reported" or per-target error. $\sigma_{tot}$ is assumed to be the standard deviation of measurements of a secondary, and the mean of reported errors for a secondary is used for $\sigma_{tgt}$.
-
-All values of NaN are cases where $\sigma_{tot}<\sigma_{tgt}$, ie. the mean reported error is greater than the actual population error.
 
 
 # Calculating intrinsic error on a per sample basis
