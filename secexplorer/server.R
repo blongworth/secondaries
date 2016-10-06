@@ -4,25 +4,27 @@ library(dplyr)
 #Load Secondaries data frame
 load("../qcData.rda")
 
-out <- filter(std, 
-                is.na(q_flag), #Check for q_flag
-                sigma < 10, sigma > -10, #Select reasonable sigmas
-                normFm < 0.02, normFm > -0.02, #Select reasonable Fm
-                frep_err < 0.10
-)
+shinyServer(function(input, output, clientData, session) {
 
-shinyServer(function(input, output, session) {
-
+  secData <- reactive({
+    switch(input$dataSource,
+           "qc" = qc,
+           "intcal" = out,
+           "standards" = std)
+  })
+  
   # Filter the secondaries
   secondaries <- reactive({
 
     # Apply filters
-    m <- out %>%
+    m <- secData() %>%
       filter(
         tp_date_pressed >= input$date[1],
         tp_date_pressed <= input$date[2],
         gf_co2_qty >= input$size[1],
-        gf_co2_qty <= input$size[2]#,
+        gf_co2_qty <= input$size[2],
+        f_modern >= input$fm[1],
+        f_modern <= input$fm[2]#,
         #abs(sigma) < input$sigma, 
         #abs(normFm) < input$nfm, 
         #rep_err < input$fme
@@ -58,6 +60,11 @@ shinyServer(function(input, output, session) {
     }
     if (input$splits == 2) { 
       m <- m %>% filter(splits == 1)
+    }
+    if (input$filt) {
+      m <- m %>% filter(abs(sigma) < input$sigsel,
+                        abs(normFm) < input$nfm, 
+                        rep_err < input$fme)
     }
 
     as.data.frame(m)

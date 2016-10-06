@@ -9,7 +9,11 @@ shinyUI(fluidPage(
   fluidRow(
     column(3,
       wellPanel(
-        h4("Filter"),
+        h3("Filters"),
+        selectInput('dataSource',
+                    label = 'Data Source', 
+                    c("qc", "intcal", "standards"),
+                    selected = "standards"),
         radioButtons("system", "System",
                      c("USAMS" = "USAMS", "CFAMS" = "CFAMS", "Both" = "both"),
                      selected = "USAMS"),
@@ -31,6 +35,11 @@ shinyUI(fluidPage(
         radioButtons("splits", "Split targets",
                      c("Split" = 1, "Unsplit" = 2, "Both" = 3),
                      selected = 3),
+        h3("Outlier removal"),
+        checkboxInput("filt", "Remove outliers"),
+        sliderInput("sigsel", "Max sigma", 0, 10, value = 10),
+        sliderInput("nfm", "Max norm Fm", 0, 0.1, value = 0.02),
+        sliderInput("fme", "Max reported error", 0, 0.10, value = 0.005),
         textInput("Name", "Sample name contains (e.g., C-2)")
       )
     ),
