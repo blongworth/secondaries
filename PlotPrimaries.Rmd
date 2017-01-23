@@ -15,15 +15,12 @@ Primary standard analysis
 #Load Libraries
 library(dplyr)
 library(knitr)
-library(RODBC)
+library(amstools)
 library(ggplot2)
 
-#Load files
-source("~/R/dbconfig.R") #DB connection info
-source("CalculateSecondaries.R") #Functions
 
 #set parameters- from, to, sys not used if loading from file
-from <- '2015-02-01'
+from <- '2016-01-24'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -31,21 +28,19 @@ size <- c(40,300)
 #Set digits for output
 options(digits=4)
 
-# Get fresh secondary data
-#out <- getQCData(from, to, sys)
 
 #Load QC data from file
 load("qcData.rda")
 
 #Filter data
-out.s <- out %>% 
+out.s <- std %>% 
   filter(primary == TRUE,
-         rec_num %in% c(113385, 113386), #look at normalizing ox-I
+         rec_num %in% c(113385, 113386, 133144), #look at normalizing ox-I
          f_modern > .1, f_modern < 1.6,
          gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
          as.Date(tp_date_pressed) >= as.Date(from),
          as.Date(tp_date_pressed) <= ifelse(to != 'present', to, Sys.Date()),
-         lab_name == "OSG", #Use only samples from the SPL
+         lab == "OSG", #Use only samples from the SPL
          is.na(q_flag), #Check for q_flag
          sigma < 10, sigma > -10, #Select reasonable sigmas
          normFm < 0.02, normFm > -0.02, #Select reasonable Fm
@@ -82,7 +77,7 @@ secsum <- out.s %>%
     d13c = mean(dc13, na.rm = TRUE),
     sig = mean(sigma),
     sig.s = sd(sigma),
-    intrerr = intrErr(sd(f_modern), mean(rep_err)),
+    #intrerr = intrErr(f_modern, rep_err),
     N = n()
     )
 
@@ -105,7 +100,7 @@ knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by 
 
 #Make summary table
 wheelsum <- out.s %>% 
-  group_by(system, wheel_id) %>%
+  group_by(system, wheel) %>%
   summarize(
     date = mean(tp_date_pressed),
     fm.s = sd(f_modern),
@@ -145,14 +140,14 @@ ggplot(data=monthsum, aes(x=month, y=rep_err.m, fill=system)) +
   scale_x_discrete(name="") +
   theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
 
-ggplot(data=out.s, aes(x=month, y=ext_err/int_err, fill=system)) + 
-  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
-  coord_cartesian(ylim = c(1, 2)) +
-  ggtitle("Error ratio by month") + 
-  scale_x_discrete(name="") +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
+#ggplot(data=out.s, aes(x=month, y=ext_err/int_err, fill=system)) + 
+#  geom_bar(stat="identity", position=position_dodge(), colour="black") + 
+#  coord_cartesian(ylim = c(1, 2)) +
+#  ggtitle("Error ratio by month") + 
+#  scale_x_discrete(name="") +
+#  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=12))
 
-ggplot(data=out.s, aes(x=month, y=ext_err, fill=system)) + 
+ggplot(data=out.s, aes(x=month, y=rep_err, fill=system)) + 
   geom_bar(stat="identity", position=position_dodge(), colour="black") + 
 #  coord_cartesian(ylim = c(1, 2)) +
   ggtitle("Error ratio by month") + 
@@ -170,31 +165,31 @@ Looking at fractional error within samples to get an idea of system precision. T
 
 ```{r precision,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=5}
 
-ggplot(out.s, aes(counts, int_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.0015, .0025)) + 
-  ggtitle("Internal precision") 
-ggplot(out.s, aes(le12c, int_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.0015, .0025)) + 
-  ggtitle("Internal precision") 
-ggplot(out.s, aes(counts, ext_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.0015, .0025)) + 
-  ggtitle("External precision") 
-ggplot(out.s, aes(le12c, ext_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.0015, .0025)) + 
-  ggtitle("External precision") 
-ggplot(out.s, aes(counts, ext_err/int_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.99, 1.01)) + 
-  ggtitle("Ext/Int Precision Ratio") +
-  geom_hline(yintercept=1) 
-ggplot(out.s, aes(le12c, ext_err/int_err)) +
-  geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
-  #scale_y_continuous(limits = c(.99, 1.01)) + 
-  ggtitle("Ext/Int Precision Ratio") +
-  geom_hline(yintercept=1) 
+# ggplot(out.s, aes(counts, int_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.0015, .0025)) + 
+#   ggtitle("Internal precision") 
+# ggplot(out.s, aes(le12c, int_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.0015, .0025)) + 
+#   ggtitle("Internal precision") 
+# ggplot(out.s, aes(counts, ext_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.0015, .0025)) + 
+#   ggtitle("External precision") 
+# ggplot(out.s, aes(le12c, ext_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.0015, .0025)) + 
+#   ggtitle("External precision") 
+# ggplot(out.s, aes(counts, ext_err/int_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.99, 1.01)) + 
+#   ggtitle("Ext/Int Precision Ratio") +
+#   geom_hline(yintercept=1) 
+# ggplot(out.s, aes(le12c, ext_err/int_err)) +
+#   geom_point(aes(shape = system, color = system)) + scale_shape(solid = FALSE) +
+#   #scale_y_continuous(limits = c(.99, 1.01)) + 
+#   ggtitle("Ext/Int Precision Ratio") +
+#   geom_hline(yintercept=1) 
 ```
 
