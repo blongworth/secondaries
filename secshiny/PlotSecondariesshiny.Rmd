@@ -44,40 +44,37 @@ qc <- filter(qc,
 )
 ```
 
-## Choose data
-
-Select data source.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-
-```
-
 
 ## Filter data
 
-use these widgets to filter secondary data as desired
+use these widgets to filter secondary data as desired.
 
 ```{r echo = FALSE}
+inputPanel(
 selectInput('dataSource',
             label = 'Data Source', 
             c("qc", "intcal", "standards"),
-            selected = "standards")
+            selected = "standards"),
 dateRangeInput('date',
                label = 'Date Range',
                start = Sys.Date() - 90, 
                end = Sys.Date(),
-               max = Sys.Date())
+               max = Sys.Date()),
 sliderInput("size", "Graphite Size (umol)",
-            1, 500, value = c(40,300))
+            1, 500, value = c(40,300)),
 sliderInput("fm", "Fm Range",
-            0, 2, value = c(.1,1.6), step = 0.05)
-checkboxInput("filtqc", "Filter by Quality?")
+            0, 2, value = c(.1,1.6), step = 0.05),
+sliderInput("av", "Added Variance",
+            0, 0.004, value = 0.0026),
+
+checkboxInput("filtqc", "Filter by Quality?", value = TRUE),
 sliderInput("sigma", "Max Sigma",
-            0, 12, value = 10)
+            0, 12, value = 10),
 sliderInput("nfm", "Max norm Fm",
-            0, 0.1, value = 0.02)
+            0, 0.1, value = 0.02),
 sliderInput("fme", "Max reported error",
             0, 0.05, value = 0.05)
+)
 
 outdata <- reactive({
     switch(input$dataSource,
@@ -88,24 +85,27 @@ outdata <- reactive({
 
 out.s <- reactive({
   out <- outdata()
-    # Apply filters
-    out <- out %>%
-      filter(
-        tp_date_pressed >= input$date[1],
-        tp_date_pressed <= input$date[2],
-        gf_co2_qty >= input$size[1],
-        gf_co2_qty <= input$size[2],
-        fm_consensus >= input$fm[1],
-        fm_consensus <= input$fm[2]
-      )
-    if (input$filtqc) {
-      out %>% filter(abs(sigma) < input$sigma, #Select reasonable sigmas
-            abs(normFm) < input$nfm, #Select reasonable Fm
-            frep_err < input$fme
-            )
-    } else {
-      out
-    }
+  # Apply filters
+  out <- out %>%
+    filter(
+      tp_date_pressed >= input$date[1],
+      tp_date_pressed <= input$date[2],
+      gf_co2_qty >= input$size[1],
+      gf_co2_qty <= input$size[2],
+      fm_consensus >= input$fm[1],
+      fm_consensus <= input$fm[2]
+    ) %>%
+    mutate(err.av = totErr(rep_err, input$av, f_modern),
+           sigma.av = sigma(f_modern, fm_consensus, err.av))
+  
+  if (input$filtqc) {
+    out %>% filter(abs(sigma) < input$sigma, #Select reasonable sigmas
+                   abs(normFm) < input$nfm, #Select reasonable Fm
+                   frep_err < input$fme
+    )
+  } else {
+    out
+  }
 })
 
 ```
@@ -133,6 +133,9 @@ renderTable({
       nFm = mean(normFm),
       nFm.s = sd(normFm),
       sig = mean(sigma),
+      sig.s = sd(sigma),
+      sig.av = mean(sigma.av),
+      sig.av.s = sd(sigma.av),
       ferr = mean(frep_err),
       N = n()
       )
@@ -156,6 +159,7 @@ out.s() %>%
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
+    err.av = mean(err.av),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
     ferr = mean(frep_err),
@@ -204,3 +208,28 @@ p + facet_grid(system ~ .) +
 })
 ```
 
+```{r sigmavsdate,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+renderPlot({
+p <- ggplot(out.s(), aes(tp_date_pressed, sigma, color=system))
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date"))
+})
+renderPlot({
+p <- ggplot(out.s(), aes(tp_date_pressed, normFm, color=system))
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date"))
+})
+renderPlot({
+
+p <- ggplot(out.s(), aes(tp_date_pressed, abs(sigma), color=system))
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date"))
+})
+renderPlot({
+
+p <- ggplot(out.s(), aes(tp_date_pressed, abs(normFm), color=system))
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date"))
+})
+
+```
