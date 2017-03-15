@@ -1,5 +1,6 @@
 library(ggvis)
 library(dplyr)
+library(plotly)
 
 #Load Secondaries data frame
 load("../qcData.rda")
@@ -24,15 +25,12 @@ shinyServer(function(input, output, clientData, session) {
         gf_co2_qty >= input$size[1],
         gf_co2_qty <= input$size[2],
         f_modern >= input$fm[1],
-        f_modern <= input$fm[2]#,
-        #abs(sigma) < input$sigma, 
-        #abs(normFm) < input$nfm, 
-        #rep_err < input$fme
+        f_modern <= input$fm[2]
       )
 
     #Filter primaries secondaries
     if (input$stdType == 1) { 
-      m <- m %>% filter(primary == TRUE) #rec_num == 113385
+      m <- m %>% filter(primary == TRUE)
     }
     if (input$stdType == 2) { 
       m <- m %>% filter(primary == FALSE)
@@ -51,7 +49,6 @@ shinyServer(function(input, output, clientData, session) {
     }
     # filter by secondary
     if (!is.null(input$Name) && input$Name != "") {
-      #Name <- paste0("%", input$Name, "%")
       m <- m %>% filter(grepl(input$Name, name))
     }
     # Splits
@@ -71,7 +68,7 @@ shinyServer(function(input, output, clientData, session) {
 
   })
 
-#   # Function for generating tooltip text
+  # Function for generating tooltip text
   secondary_tooltip <- function(x) {
     if (is.null(x)) return(NULL)
     if (is.null(x$tp_num)) return(NULL)
@@ -83,7 +80,7 @@ shinyServer(function(input, output, clientData, session) {
     paste0("<b>", std$name, "</b><br>",
            std$tp_num, "<br>",
            std$tp_date_pressed, "<br>",
-           std$wheel_id, "<br>",
+           std$wheel, "<br>",
            sprintf("%.4f", std$f_modern)
     )
   }
@@ -109,6 +106,7 @@ shinyServer(function(input, output, clientData, session) {
   })
 
   vis %>% bind_shiny("plot1")
+
 
   output$stdData <- renderUI({ 
     
