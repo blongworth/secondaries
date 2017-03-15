@@ -1,5 +1,6 @@
 library(shiny)
 library(ggvis)
+library(plotly)
 
 # Secondary explorer shiny app.
 # Loads an R data file of secondary standard data and plots
@@ -47,14 +48,15 @@ shinyUI(fluidPage(
       )
     ),
     column(9,
-      ggvisOutput("plot1"),
-      wellPanel(
-        selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
-        selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
-      ),
-      wellPanel(
-        htmlOutput("stdData")
-      )
+           ggvisOutput("plot1"),
+           wellPanel(
+             selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
+             selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
+           ),
+           plotlyOutput("plot"),
+           wellPanel(
+             htmlOutput("stdData")
+           )
     )
   )
 ))

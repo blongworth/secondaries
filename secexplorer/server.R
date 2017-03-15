@@ -111,6 +111,21 @@ shinyServer(function(input, output, clientData, session) {
 
   vis %>% bind_shiny("plot1")
 
+  output$plot <- renderPlotly({
+
+    # build graph with ggplot syntax
+    p <- ggplot(secondaries(), aes_string(x = input$xvar, y = input$yvar, color = "system")) + 
+      geom_point()
+
+
+    ggplotly(p) %>% 
+      add_markers(
+        hoverinfo = "text",
+        text = ~paste("Type = ", name, "wheel = ", wheel)
+      )
+      #layout(height = input$plotHeight, autosize=TRUE)
+
+  })
 
   output$stdData <- renderUI({ 
     
