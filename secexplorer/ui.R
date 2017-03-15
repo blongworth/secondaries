@@ -23,6 +23,9 @@ shinyUI(fluidPage(
         radioButtons("lab", "Graphite Lab",
                      c("SPL" = 1, "Watson" = 2, "All" = 3),
                      selected = 1),
+        selectInput("process", "Process",
+                     c("All", "HY", "GS", "WS", "OC"),
+                     selected = "All"),
         dateRangeInput('date',
                        label = 'Date Range',
                        start = Sys.Date() - 90, 
@@ -37,9 +40,9 @@ shinyUI(fluidPage(
                      selected = 3),
         h3("Outlier removal"),
         checkboxInput("filt", "Remove outliers"),
-        sliderInput("sigsel", "Max sigma", 0, 10, value = 10),
-        sliderInput("nfm", "Max norm Fm", 0, 0.1, value = 0.02),
-        sliderInput("fme", "Max reported error", 0, 0.10, value = 0.005),
+        sliderInput("sigsel", "Max sigma", 0, 20, value = 20),
+        sliderInput("nfm", "Max norm Fm", 0, 0.1, value = 0.10),
+        sliderInput("fme", "Max reported error", 0, 0.10, value = 0.1),
         textInput("Name", "Sample name contains (e.g., C-2)")
       )
     ),

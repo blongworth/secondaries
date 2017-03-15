@@ -42,6 +42,10 @@ shinyServer(function(input, output, clientData, session) {
     if (input$lab == 2) { 
       m <- m %>% filter(lab == "WAT")
     }
+    # Filter by process type
+    if (input$process != "All") {
+      m <- m %>% filter(process == input$process)
+    }
     # filter by system
     if (input$system != "both") {
       sys <- paste0(input$system)
