@@ -111,8 +111,8 @@ shinyServer(function(input, output, clientData, session) {
   output$stdData <- renderUI({ 
     
     z <- secondaries()
-    
-    n <- paste0("Number of samples selected ", nrow(z))
+    count <- nrow(z)
+    n <- paste0("Number of samples selected ", count)
     
     s <- sprintf("Mean sigma of selected is %.4f SD %.4f", 
                  mean(z$sigma), 
@@ -126,7 +126,10 @@ shinyServer(function(input, output, clientData, session) {
                  mean(z$frep_err), 
                  sd(z$frep_err))
     
-    HTML(paste(n, s, f, e, sep = '<br/>'))
+    fly <- sprintf("Fraction of flyers (greater than 3 sigma): %.3f",
+                    sum(abs(z$sigma) > 3) / count)
+    
+    HTML(paste(n, s, f, e, fly, sep = '<br/>'))
     
   })
 })
