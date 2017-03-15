@@ -10,9 +10,9 @@ shinyUI(fluidPage(
     column(3,
       wellPanel(
         h3("Filters"),
-        selectInput('dataSource',
-                    label = 'Data Source', 
-                    c("qc", "intcal", "standards"),
+        radioButtons("dataSource",
+                    label = "Data Source", 
+                    c("intcal", "standards"),
                     selected = "standards"),
         radioButtons("system", "System",
                      c("USAMS" = "USAMS", "CFAMS" = "CFAMS", "Both" = "both"),
