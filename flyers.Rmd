@@ -19,10 +19,10 @@ library(lubridate)
 library(tidyr)
 
 #set parameters
-from <- '2016-01-01'
+from <- '2014-01-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(50,300)
+size <- c(10,300)
 
 #Set digits for output
 options(digits=4)
@@ -34,7 +34,7 @@ load("qcData.rda")
 out <- std %>%
   mutate(runtime = as.Date(runtime)) %>%
   filter(primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
-         f_modern > .8, f_modern < 1.2,
+         fm_consensus > .1,
          runtime >= as.Date(from),
          runtime <= ifelse(to != 'present', to, Sys.Date()),
          gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
@@ -45,7 +45,7 @@ out <- std %>%
          is.na(q_flag) #Check for q_flag
   ) %>%
   mutate(year = year(tp_date_pressed),
-         month = month(tp_date_pressed),
+         month = month(tp_date_pressed), 
          sigav = sigma(f_modern, fm_consensus, totErr(rep_err, 0.0026, f_modern))) %>%
   arrange(year, month, lab, system)
 #write.csv(out, "standards.csv")
