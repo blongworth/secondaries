@@ -72,58 +72,20 @@ shinyServer(function(input, output, clientData, session) {
 
   })
 
-  # Function for generating tooltip text
-  secondary_tooltip <- function(x) {
-    if (is.null(x)) return(NULL)
-    if (is.null(x$tp_num)) return(NULL)
-
-    # Pick out the secondary with this ID
-    stds <- isolate(secondaries())
-    std <- stds[stds$tp_num == x$tp_num, ]
-
-    paste0("<b>", std$name, "</b><br>",
-           std$tp_num, "<br>",
-           std$tp_date_pressed, "<br>",
-           std$wheel, "<br>",
-           sprintf("%.4f", std$f_modern)
-    )
-  }
-
-  # A reactive expression with the ggvis plot
-  vis <- reactive({
-    # Lables for axes
-    xvar_name <- names(axis_vars)[axis_vars == input$xvar]
-    yvar_name <- names(axis_vars)[axis_vars == input$yvar]
-
-    xvar <- prop("x", as.symbol(input$xvar))
-    yvar <- prop("y", as.symbol(input$yvar))
-
-    secondaries %>%
-      ggvis(x = xvar, y = yvar) %>%
-      layer_points(size := 50, size.hover := 200,
-        fillOpacity := 0.2, fillOpacity.hover := 0.5,
-        stroke = ~system, key := ~tp_num) %>%
-      add_tooltip(secondary_tooltip, "hover") %>%
-      add_axis("x", title = xvar_name) %>%
-      add_axis("y", title = yvar_name) %>%
-      set_options(width = 500, height = 500)
-  })
-
-  vis %>% bind_shiny("plot1")
 
   output$plot <- renderPlotly({
-
-    # build graph with ggplot syntax
-    p <- ggplot(secondaries(), aes_string(x = input$xvar, y = input$yvar, color = "system")) + 
-      geom_point()
-
+    
+    ## build graph with ggplot syntax
+    p <- ggplot(secondaries(), aes_string(x = input$xvar, y = input$yvar, fill = "system")) 
 
     ggplotly(p) %>% 
       add_markers(
+        color = ~system,
         hoverinfo = "text",
-        text = ~paste("Type = ", name, "wheel = ", wheel)
+        text = ~paste("Type: ", name, "<br>", 
+                      "OSG: ", osg_num, "<br>",
+                      "Wheel: ", wheel)
       )
-      #layout(height = input$plotHeight, autosize=TRUE)
 
   })
 

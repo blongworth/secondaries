@@ -48,12 +48,11 @@ shinyUI(fluidPage(
       )
     ),
     column(9,
-           ggvisOutput("plot1"),
+           plotlyOutput("plot", height = "600px"),
            wellPanel(
              selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
              selectInput("yvar", "Y-axis variable", axis_vars, selected = "normFm")
            ),
-           plotlyOutput("plot"),
            wellPanel(
              htmlOutput("stdData")
            )
