@@ -22,7 +22,8 @@ library(tidyr)
 from <- '2014-01-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(10,300)
+size <- c(80,300)
+sigcut <- 3 # cutoff value for sigma
 
 #Set digits for output
 options(digits=4)
@@ -44,8 +45,8 @@ out <- std %>%
          frep_err < .10,
          is.na(q_flag) #Check for q_flag
   ) %>%
-  mutate(year = year(tp_date_pressed),
-         month = month(tp_date_pressed), 
+  mutate(year = year(runtime),
+         month = month(runtime), 
          sigav = sigma(f_modern, fm_consensus, totErr(rep_err, 0.0026, f_modern))) %>%
   arrange(year, month, lab, system)
 #write.csv(out, "standards.csv")
@@ -53,13 +54,13 @@ out <- std %>%
 
 ### Summarize by month
 
-* Data are fraction of all secondaries > 3 sigma
+* Data are fraction of all secondaries > `r sigcut` sigma
 
 ```{r}
 
 out.s <- out %>% group_by(year, month, lab, system) %>% 
-  summarise(hisig = sum(abs(sigma) > 3),
-            hisigav = sum(abs(sigav) > 3),
+  summarise(hisig = sum(abs(sigma) > sigcut),
+            hisigav = sum(abs(sigav) > sigcut),
             count = n()) %>%
   mutate(hisigf = hisig/count,
          hisigavf = hisigav/count,
@@ -74,25 +75,25 @@ kable(out.s)
 
 ### Overall summary
 
-"hisig" is number of secondaries > 3 sigma, columns with "av" include
-added variance. Columns ending in "f" are fraction greater than 3 sigma.
+"hisig" is number of secondaries > `r sigcut` sigma, columns with "av" include
+added variance. Columns ending in "f" are fraction greater than `r sigcut` sigma.
 
 ```{r}
 
 out %>% 
   group_by(system, lab) %>%
-  summarise(hisig = sum(abs(sigma) > 3),
-            hisigav = sum(abs(sigav) > 3),
+  summarise(hisig = sum(abs(sigma) > sigcut),
+            hisigav = sum(abs(sigav) > sigcut),
             count = n(),
             err = mean(frep_err)) %>%
   mutate(hisigf = hisig/count,
          hisigavf = hisigav/count) %>%
-  kable(caption = "Secondaries > 3 sigma, 2016 to present")
+  kable(caption = paste("Secondaries >", sigcut, "sigma, 2016 to present"))
 ```
 
 ### Plots
 
-* Bars are fraction of secondaries greater than 3 sigma by month and system
+* Bars are fraction of secondaries greater than `r sigcut` sigma by month and system
 
 ```{r}
 ggplot(out.s, aes(date, hisigf)) + 
@@ -100,7 +101,7 @@ ggplot(out.s, aes(date, hisigf)) +
   geom_point(aes(shape = system, color = system), size = 3) +
   theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) +
   facet_grid(lab ~ .) +
-    ggtitle("Fraction of secondaries > 3 sigma")
+    ggtitle(paste("Fraction of secondaries >", sigcut, "sigma"))
 ```
 
 ```{r}
@@ -109,5 +110,5 @@ ggplot(out.s, aes(date, hisigavf)) +
   geom_point(aes(shape = system, color = system), size = 3) +
   facet_grid(lab ~ .) +
   theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) +
-    ggtitle("Fraction of secondaries > 3 sigma", subtitle = "With added variance of 0.026 * Fm")
+  ggtitle(paste("Fraction of secondaries >", sigcut,"sigma"), subtitle = "With added variance of 0.026 * Fm")
 ```
