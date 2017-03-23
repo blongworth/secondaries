@@ -6,6 +6,9 @@ library(RColorBrewer)
 #Load Secondaries data frame
 load("../qcData.rda")
 
+if (names(dev.cur()) != "null device") dev.off()
+pdf(NULL)
+
 # color map for plots
 colors <- brewer.pal(3, "Set2")
 color_map <- c(CFAMS=colors[1], USAMS=colors[2])
