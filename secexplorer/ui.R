@@ -40,7 +40,7 @@ shinyUI(fluidPage(
                      c("Split" = 1, "Unsplit" = 2, "Both" = 3),
                      selected = 3),
         h3("Outlier removal"),
-        checkboxInput("filt", "Remove outliers"),
+        checkboxInput("filt", "Remove outliers", value = TRUE),
         sliderInput("sigsel", "Max sigma", 0, 20, value = 20),
         sliderInput("nfm", "Max norm Fm", 0, 0.1, value = 0.10),
         sliderInput("fme", "Max reported error", 0, 0.10, value = 0.1),
