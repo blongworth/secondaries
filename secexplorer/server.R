@@ -1,9 +1,14 @@
 library(ggvis)
 library(dplyr)
 library(plotly)
+library(RColorBrewer)
 
 #Load Secondaries data frame
 load("../qcData.rda")
+
+# color map for plots
+colors <- brewer.pal(3, "Set2")
+color_map <- c(CFAMS=colors[1], USAMS=colors[2])
 
 shinyServer(function(input, output, clientData, session) {
 
@@ -76,11 +81,19 @@ shinyServer(function(input, output, clientData, session) {
   output$plot <- renderPlotly({
     
     ## build graph with ggplot syntax
-    p <- ggplot(secondaries(), aes_string(x = input$xvar, y = input$yvar, fill = "system")) 
-
+    p <- ggplot(secondaries(),
+                aes_string(x = input$xvar,
+                           y = input$yvar,
+                           color = "system")) +
+      theme_bw()
+    
+    
     ggplotly(p) %>% 
       add_markers(
-        color = ~system,
+        marker = list(color = color_map[secondaries()$system],
+                      size = 9,
+                      opacity = 0.7),
+        showlegend = FALSE,
         hoverinfo = "text",
         text = ~paste("Type: ", name, "<br>", 
                       "OSG: ", osg_num, "<br>",

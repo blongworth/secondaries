@@ -48,6 +48,7 @@ shinyUI(fluidPage(
       )
     ),
     column(9,
+           h3("Colors:", span("CFAMS", style = "color:#66C2A5"), span("USAMS", style = "color:#FC8D62")),
            plotlyOutput("plot", height = "600px"),
            wellPanel(
              selectInput("xvar", "X-axis variable", axis_vars, selected = "rep_err"),
