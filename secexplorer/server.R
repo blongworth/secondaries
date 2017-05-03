@@ -32,8 +32,8 @@ shinyServer(function(input, output, clientData, session) {
         tp_date_pressed <= input$date[2],
         gf_co2_qty >= input$size[1],
         gf_co2_qty <= input$size[2],
-        f_modern >= input$fm[1],
-        f_modern <= input$fm[2]
+        fm_consensus >= input$fm[1],
+        fm_consensus <= input$fm[2]
       )
 
     #Filter primaries secondaries
