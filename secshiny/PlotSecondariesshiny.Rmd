@@ -1,14 +1,19 @@
 ---
+title: "Secondary Standards"
 runtime: shiny
 output: html_document
 ---
 
 
-Secondary standard analysis
-========================================================
-
 `r as.character(format(Sys.Date(), format="%B %d, %Y"))`
 
+Analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+
+normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
 
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
@@ -66,7 +71,6 @@ sliderInput("fm", "Fm Range",
             0, 2, value = c(.1,1.6), step = 0.05),
 sliderInput("av", "Added Variance",
             0, 0.004, value = 0.0026),
-
 checkboxInput("filtqc", "Filter by Quality?", value = TRUE),
 sliderInput("sigma", "Max Sigma",
             0, 12, value = 10),
@@ -110,16 +114,21 @@ out.s <- reactive({
 
 ```
 
-analysis of performance of all secondary standards, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
 
-normalized fm difference is defined as:
+# Summary tables
 
-$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
-
-where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
-
-
-# Summary table
+row header | definition
+-----------|-----------
+fm.e       | expected or consensus fm
+fm.s       | standard deviation of fm
+err        | reported error
+err.av     | re with added variance 
+nFm        | normalized Fm, 0 = consensus
+nFm.s      | sd of normalized Fm
+ferr       | fractional reported error
+sig        | sigma
+sig.s      | sd of sigma
+sig.av     | sigma with added variance
 
 ## By System
 
@@ -148,6 +157,8 @@ renderTable({
 
 
 ## By Secondary and System
+
+
 ```{r, echo=FALSE, message=FALSE, results='asis'}
 
 renderTable({
@@ -164,6 +175,7 @@ out.s() %>%
     nFm.s = sd(normFm),
     ferr = mean(frep_err),
     sig = mean(sigma),
+    sig.av = mean(sigma.av),
     N = n()
     )
 }, digits=4)
@@ -172,9 +184,13 @@ out.s() %>%
 
 # Histograms
 
+Sigma (green), and sigma with added variance (orange) plotted together to see the effect of added variance.
+
 ```{r SigmaHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 renderPlot({
-ggplot(out.s(), aes(sigma)) + geom_histogram(bins = input$bins) + 
+ggplot(out.s(), aes(sigma)) +
+  geom_histogram(bins = input$bins, fill = "darkgreen", alpha = 0.3) + 
+  geom_histogram(aes(sigma.av), bins = input$bins, fill = "orange", alpha = 0.3) + 
   facet_grid(system ~ .) + 
   ggtitle(paste("Sigma Histogram"))
 })
