@@ -19,10 +19,10 @@ library(knitr)
 library(amstools)
 
 #set parameters
-from <- '2014-09-01'
+from <- '2016-07-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
-size <- c(8,300)
+size <- c(40,300)
 
 #Set digits for output
 options(digits=4)
@@ -41,7 +41,7 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
                 lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
-                abs(sigma) < 10, #Select reasonable sigmas
+                abs(sigma) < 5, #Select reasonable sigmas
                 abs(normFm) < 0.03, #Select reasonable Fm
                 frep_err < 0.10
               )
