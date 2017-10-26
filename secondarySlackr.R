@@ -1,3 +1,5 @@
+#!/usr/bin/r
+
 # Secondary Slackr
 # Writes a summary table of secondary performance for the last three
 # months to Slack.
