@@ -1,3 +1,8 @@
+# Secondary Slackr
+# Writes a summary table of secondary performance for the last three
+# months to Slack.
+# Slack params in ~/.slackr
+
 #Load Libraries
 library(dplyr)
 library(ggplot2)
@@ -6,7 +11,7 @@ library(amstools)
 library(slackr)
 
 #set parameters
-from <- '2017-07-01'
+from <- Sys.Date() - 90
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -22,6 +27,7 @@ load("qcData.rda")
 
 # Setup slack
 slackr_setup()
+
 #Filter data
 out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
                 f_modern > .1, f_modern < 1.6,
