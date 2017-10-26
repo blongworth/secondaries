@@ -6,7 +6,7 @@
 # Slack params in ~/.slackr
 
 #Load Libraries
-library(dplyr)
+suppressPackageStartupMessages(library(dplyr))
 library(ggplot2)
 library(knitr)
 library(amstools)
@@ -57,5 +57,5 @@ syssum <- out.s %>%
 
 #knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
 #slackr(str(iris))
-slackr("Summary of secondaries", from, "to present\n", print(syssum))
+slackr(paste("Summary of secondaries", from, "to present"), print(syssum))
 #print(table, floating=TRUE, type="html")
