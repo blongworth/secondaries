@@ -93,7 +93,7 @@ shinyServer(function(input, output, clientData, session) {
     
     ggplotly(p) %>% 
       add_markers(
-        marker = list(color = color_map[secondaries()$system],
+        marker = list(fillcolor = color_map[secondaries()$system],
                       size = 9,
                       opacity = 0.7),
         showlegend = FALSE,

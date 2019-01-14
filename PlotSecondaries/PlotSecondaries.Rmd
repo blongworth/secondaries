@@ -1,5 +1,7 @@
 ---
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 Secondary standard analysis
 ========================================================
@@ -17,12 +19,16 @@ library(dplyr)
 library(ggplot2)
 library(knitr)
 library(amstools)
-
+library(stringr)
+ 
 #set parameters
-from <- '2016-07-01'
+from <- '2017-07-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
+msig <- 5
+mnfm <- .02
+mferr <- .1
 
 #Set digits for output
 options(digits=4)
@@ -41,13 +47,13 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
                 lab == "OSG", #Use only samples from the SPL
                 is.na(q_flag), #Check for q_flag
-                abs(sigma) < 5, #Select reasonable sigmas
-                abs(normFm) < 0.03, #Select reasonable Fm
-                frep_err < 0.10
+                abs(sigma) < msig, #Select reasonable sigmas
+                abs(normFm) < mnfm, #Select reasonable Fm
+                frep_err < mferr
               )
 ```
 
-Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (less than `r msig`) and normalized Fm (less than `r mnfm`), and only secondaries Fm > .1 used.
 
 * Mean Sigma for USAMS is `r mean(out.s$sigma[out.s$system=="USAMS"])`.
 * Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
@@ -71,11 +77,9 @@ syssum <- out.s %>%
   summarize(
     nFm = mean(normFm),
     nFm.s = sd(normFm),
-    nFm.e = se(normFm),
     sig = mean(sigma),
     sig.sd = sd(sigma),
     ferr = mean(frep_err),
-    intrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     N = n()
     )
 
@@ -97,13 +101,13 @@ secsum <- out.s %>%
     fm = mean(f_modern),
     fm.s = sd(f_modern),
     err = mean(rep_err),
-    intrerr = mean(intrErr(f_modern, rep_err), na.rm=TRUE),
-    d13c = mean(dc13),
+    #intrerr = mean(intrErr(f_modern, rep_err), na.rm=TRUE),
+    #d13c = mean(dc13),
     nFm = mean(normFm),
     nFm.s = sd(normFm),
-    nFm.e = se(normFm),
+    #nFm.e = se(normFm),
     ferr = mean(frep_err),
-    fintrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
+    #fintrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
     sig = mean(sigma),
     sig.s = sd(sigma),
     N = n()

@@ -1,0 +1,277 @@
+---
+output: html_document
+---
+Secondary standard analysis
+========================================================
+
+`r as.character(format(Sys.Date(), format="%B %d, %Y"))`
+
+
+
+
+
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Load Libraries
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(amstools)
+library(stringr)
+
+#set parameters
+from <- '2016-06-01'
+to <- '2016-07-27'
+sys <- 'both' #cfams, usams, ams1 or both
+size <- c(40,300)
+
+#Set digits for output
+options(digits=4)
+
+# Get fresh secondary data
+#out <- getQCData(from, to, sys)
+
+#Load QC data from file
+load("qcData.rda")
+
+# Residual error function
+calcRE <- function(fm, rep_err, res_err) {
+  sqrt(rep_err^2 + (res_err * fm)^2)
+}
+
+#Filter data
+out.s <- filter(std, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
+                f_modern > .1, f_modern < 1.6,
+                tp_date_pressed >= as.Date(from),
+                tp_date_pressed <= ifelse(to != 'present', to, Sys.Date()),
+                gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
+                lab == "OSG", #Use only samples from the SPL
+                is.na(q_flag), #Check for q_flag
+                abs(sigma) < 4, #Select reasonable sigmas
+                abs(normFm) < 0.03, #Select reasonable Fm
+                frep_err < 0.010
+              ) %>%
+  mutate(rep_err_cor = calcRE(f_modern, rep_err, 0.002),
+         sigma_rec = sigma(f_modern, fm_consensus, rep_err_cor))
+```
+
+Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (-10 to 10) and normalized Fm (-0.02 to 0.02), and only secondaries Fm > .1 used.
+
+* Mean Sigma for USAMS is `r mean(out.s$sigma[out.s$system=="USAMS"])`.
+* Mean Sigma for CFAMS is `r mean(out.s$sigma[out.s$system=="CFAMS"])`.
+
+Normalized fm difference is defined as:
+
+$\frac{Fm_{m}-Fm_{c}}{Fm_{c}}$
+
+where $Fm_{m}$ is measured Fm and $Fm_{c}$ is consensus Fm.
+
+
+# Summary table
+
+## By System
+
+```{r, echo=FALSE, message=FALSE,}
+
+#Make summary table
+syssum <- out.s %>%
+  group_by(system) %>%
+  summarize(
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    #nFm.e = se(normFm),
+    sig = mean(sigma),
+    sig.sd = sd(sigma),
+    #sig.cor = mean(sigma_rec),
+    #sig.sd.cor = sd(sigma_rec),
+    ferr = mean(frep_err),
+    #intrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
+    N = n()
+    )
+
+knitr::kable(syssum, digits = 5, caption = "Summary data for secondaries")
+
+
+#print(table, floating=TRUE, type="html")
+```
+
+
+## By Secondary and System
+```{r, echo=FALSE, message=FALSE, results='asis'}
+
+#Make summary table
+secsum <- out.s %>% 
+  group_by(name, system) %>%
+  summarise(
+    fm.e = mean(fm_consensus),
+    fm = mean(f_modern),
+    fm.s = sd(f_modern),
+    err = mean(rep_err),
+    #intrerr = mean(intrErr(f_modern, rep_err), na.rm=TRUE),
+    #d13c = mean(dc13),
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    #nFm.e = se(normFm),
+    #ferr = mean(frep_err),
+    #fintrerr = mean(intrErr(normFm, frep_err), na.rm=TRUE),
+    sig = mean(sigma),
+    sig.s = sd(sigma),
+    N = n()
+    )
+
+knitr::kable(secsum, digits = 4, caption = "Summary data for all secondaries")
+```
+
+
+# Histograms
+
+```{r SigmaHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#Sigma histogram
+ggplot(out.s, aes(sigma)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Histogram, ", sys, ", ", from))
+```
+
+
+# Boxplots
+
+Boxplots of secondaries ordered by Fm and separated by instrument. Boxes are 1st-3rd quartile, line is median, and whiskers indicate 1.5*IQD. 
+
+```{r, SigmaBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#sigma boxplots
+p <- ggplot(out.s, aes(name, sigma, color=process)) +
+  geom_hline(yintercept=0) + 
+  geom_hline(yintercept=1) + 
+  geom_hline(yintercept=-1) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Sigma Boxplots, ", sys, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+#normfm boxplots
+p <- ggplot(out.s, aes(name, normFm, color=process)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter()
+p + facet_grid(system ~ .) + 
+  ggtitle(paste("Normalized Fm difference Boxplots, ", sys, ", ", from)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+
+## All secondaries by system
+
+```{r, SystemBoxplots, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#sigma boxplots
+p <- ggplot(out.s, aes(system, sigma)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter(aes(color=process))
+p + ggtitle(paste("Sigma Boxplots for all secondaries by system")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+#normfm boxplots
+p <- ggplot(out.s, aes(system, normFm)) + geom_hline(yintercept=0) + 
+  geom_boxplot() + geom_jitter(aes(color=process))
+p + ggtitle(paste("Normalized Fm difference Boxplots for all secondaries by system")) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+
+# Fm vs Sigma
+
+Sigma varies by Fm. First plot shows a regression through all data, 
+which weights by N of secondaries, and second plot regression is 
+through means of secondaries (whiskers show SD of mean).
+
+```{r SigmavsRatio, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+#ratio vs sigma
+p <- ggplot(data=out.s, aes(f_modern, sigma, color=system))
+p + geom_hline(yintercept=0) + geom_point(aes(shape=process)) + stat_smooth(method="lm", se=FALSE) +
+  ggtitle(paste("Sigma vs Fm, ", sys, ", ", from))
+  #scale_colour_manual(values=cbPalette)
+
+p <- ggplot(data=secsum, aes(fm, sig, color=system))
+p + geom_hline(yintercept=0) + geom_point() +
+  geom_errorbar(aes(ymin=sig-sig.s, ymax=sig+sig.s), width=.02) + 
+  geom_smooth(method="lm") + 
+  geom_point(size=3) + ggtitle(paste("Sigma vs Fm, ", sys, ", ", from)) 
+  #scale_colour_manual(values=cbPalette)
+
+```
+
+
+# Fm vs Normalized Fm error
+
+Another way of looking at the same. Y-axis is now normalized Fm error ( (Fm - consensus) / consensus ).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+#norm ratio vs ratio
+ggplot(data=out.s, aes(f_modern, normFm, color=system)) +
+  geom_hline(yintercept=0) + geom_point(aes(shape=process)) + geom_smooth(method="lm") +
+  ggtitle(paste("NormFm vs Fm, ", sys, ", ", from))
+
+ggplot(secsum, aes(x = fm, y = nFm, color=system)) +
+  geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  geom_errorbar(aes(ymin=nFm-nFm.s, ymax=nFm+nFm.s), width=.02) + geom_jitter(size=3) +
+  ggtitle(paste("NormFm vs Fm, ", sys, ", ", from))
+```
+
+
+
+#Sample size vs sigma
+
+```{r SizeHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+ggplot(out.s, aes(gf_co2_qty)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Size Histogram, ", sys, ", ", from))
+```
+
+```{r sigmavsco2, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+p <- qplot(gf_co2_qty, sigma, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, normFm, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth(method="lm") + 
+  ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs umol CO2, ", sys, ", ", from))
+
+p <- qplot(gf_co2_qty, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs umol CO2, ", sys, ", ", from))
+```
+
+
+# Date vs Sigma
+
+```{r DateHistogram, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+
+ggplot(out.s, aes(tp_date_pressed)) + geom_histogram() + 
+  facet_grid(system ~ .) + 
+  ggtitle(paste("Date Histogram, ", sys, ", ", from))
+```
+
+```{r sigmavsdate,  echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+p <- qplot(tp_date_pressed, sigma, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, normFm, color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(sigma), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Sigma vs date, ", sys, ", ", from))
+
+p <- qplot(tp_date_pressed, abs(normFm), color=system, data=out.s)
+p + geom_hline(yintercept=0) + geom_point() + geom_smooth() + 
+  ggtitle(paste("Normfm vs date, ", sys, ", ", from))
+
+
+```
