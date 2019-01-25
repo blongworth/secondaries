@@ -81,7 +81,6 @@ shinyServer(function(input, output, clientData, session) {
   })
 
   output$plot <- renderPlotly({
-  
     ## build graph with ggplot syntax
     p <- ggplot(secondaries(),
                 aes(x = get(input$xvar),
@@ -92,7 +91,9 @@ shinyServer(function(input, output, clientData, session) {
                                  "Wheel:", wheel))) +
       theme_bw() +
       geom_point() +
-      labs(x = input$xvar, y = input$yvar)
+      labs(x = input$xvar, y = input$yvar) +
+      scale_color_manual(values = color_map)
+      
     ggplotly(p) 
 
   })
