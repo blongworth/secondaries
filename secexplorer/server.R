@@ -80,28 +80,20 @@ shinyServer(function(input, output, clientData, session) {
 
   })
 
-
   output$plot <- renderPlotly({
-    
+  
     ## build graph with ggplot syntax
     p <- ggplot(secondaries(),
-                aes_string(x = input$xvar,
-                           y = input$yvar,
-                           color = "system")) +
-      theme_bw()
-    
-    
-    ggplotly(p) %>% 
-      add_markers(
-        marker = list(fillcolor = color_map[secondaries()$system],
-                      size = 9,
-                      opacity = 0.7),
-        showlegend = FALSE,
-        hoverinfo = "text",
-        text = ~paste("Type: ", name, "<br>", 
-                      "OSG: ", osg_num, "<br>",
-                      "Wheel: ", wheel)
-      )
+                aes(x = get(input$xvar),
+                    y = get(input$yvar),
+                    color = system,
+                    text = paste("Type:", name, "<br>", 
+                                 "OSG:", osg_num, "<br>",
+                                 "Wheel:", wheel))) +
+      theme_bw() +
+      geom_point() +
+      labs(x = input$xvar, y = input$yvar)
+    ggplotly(p) 
 
   })
 
@@ -130,3 +122,4 @@ shinyServer(function(input, output, clientData, session) {
     
   })
 })
+
