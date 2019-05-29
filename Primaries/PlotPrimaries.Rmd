@@ -30,12 +30,12 @@ options(digits=4)
 
 
 #Load QC data from file
-load("qcData.rda")
+load("../qcData.rda")
 
 #Filter data
 out.s <- std %>% 
   filter(primary == TRUE,
-         rec_num %in% c(113385, 113386, 133144), #look at normalizing ox-I
+         rec_num %in% c(113385, 113386, 133143, 133144, 149822), #look at normalizing ox-I
          f_modern > .1, f_modern < 1.6,
          gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
          as.Date(tp_date_pressed) >= as.Date(from),
@@ -96,7 +96,7 @@ monthsum <- out.s %>%
     N = n()
   )
 
-knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
+# knitr::kable(monthsum, digits = 4, caption = "Summary data for all primaries by month")
 
 #Make summary table
 wheelsum <- out.s %>% 
