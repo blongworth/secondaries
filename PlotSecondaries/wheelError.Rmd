@@ -1,0 +1,112 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Standard performance by wheel
+
+`r as.character(format(Sys.Date(), format="%B %d, %Y"))`
+
+
+## Load libraries and data
+
+Using all primaries and secondaries, 2016 to present, Fm > 0.1, size > 500ug, SPL graphite only, sigma < 10, reported error < 10%.
+
+```{r Setup, echo=TRUE, warning=FALSE, message=FALSE}
+
+#Load Libraries
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(amstools)
+library(stringr)
+library(lubridate)
+library(here)
+ 
+#set parameters
+from <- '2016-01-01'
+to <- 'present' #present or date
+sys <- 'both' #cfams, usams, ams1 or both
+size <- c(40,300)
+msig <- 10
+mnfm <- .02
+mferr <- .1
+
+#Set digits for output
+options(digits=4)
+
+# Get fresh secondary data
+#out <- getQCData(from, to, sys)
+
+#Load QC data from file
+load(here("qcData.rda"))
+
+#Filter data
+out.s <- filter(out, #primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
+                f_modern > .1, f_modern < 1.6,
+                tp_date_pressed >= as.Date(from),
+                tp_date_pressed <= ifelse(to != 'present', to, Sys.Date()),
+                gf_co2_qty > size[1], gf_co2_qty < size[2], #Select size range
+                lab == "OSG", #Use only samples from the SPL
+                is.na(q_flag), #Check for q_flag
+                abs(sigma) < msig, #Select reasonable sigmas
+                #abs(normFm) < mnfm, #Select reasonable Fm
+                frep_err < mferr
+              )
+```
+
+
+Aggregate standard data by wheel.
+
+```{r, echo=TRUE, message=FALSE,}
+
+#Make summary table
+wheelsum <- out.s %>%
+  group_by(wheel, system) %>%
+  summarize(
+    nFm = mean(normFm),
+    nFm.s = sd(normFm),
+    sig = mean(sigma),
+    sig.sd = sd(sigma),
+    ferr = mean(frep_err),
+    N = n()
+    ) %>%
+  mutate(date = mdy(substr(wheel, 6, 11))) %>%
+  arrange(date)
+```
+
+## Summary 
+
+### By system
+
+#### Average of per-wheel sd of sigmas, by system.
+```{r}
+wheelsum %>% ungroup() %>%
+  group_by(system) %>% summarize(sig.sd = mean(sig.sd, rm.na = TRUE)) 
+```
+
+#### Histogram of per-wheel sd of sigmas by system
+
+```{r}
+ggplot(wheelsum, aes(sig.sd)) +
+  geom_histogram() +
+  facet_grid(system ~ .)
+```
+
+## Over time
+
+```{r}
+ggplot(wheelsum, aes(date, sig.sd, color = system)) +
+  geom_smooth() +
+  geom_point()
+```
+
+## All wheels
+```{r}
+# display full table
+knitr::kable(wheelsum, digits = 5, caption = "Summary data for secondaries")
+```
+
+
+
