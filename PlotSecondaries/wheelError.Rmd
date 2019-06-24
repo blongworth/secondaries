@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 # Standard performance by wheel
@@ -25,7 +25,7 @@ library(lubridate)
 library(here)
  
 #set parameters
-from <- '2016-01-01'
+from <- '2019-02-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -81,9 +81,12 @@ wheelsum <- out.s %>%
 ### By system
 
 #### Average of per-wheel sd of sigmas, by system.
+
 ```{r}
-wheelsum %>% ungroup() %>%
-  group_by(system) %>% summarize(sig.sd = mean(sig.sd, rm.na = TRUE)) 
+wheelsum %>% 
+  ungroup() %>%
+  group_by(system) %>% 
+  summarize(sig.sd = mean(sig.sd, rm.na = TRUE)) 
 ```
 
 #### Histogram of per-wheel sd of sigmas by system
@@ -94,10 +97,28 @@ ggplot(wheelsum, aes(sig.sd)) +
   facet_grid(system ~ .)
 ```
 
+#### By number of standards
+
+```{r}
+ggplot(wheelsum, aes(N, sig.sd, color = system)) +
+  geom_smooth() +
+  geom_point()
+```
+
 ## Over time
+
+### SD of sigmas
 
 ```{r}
 ggplot(wheelsum, aes(date, sig.sd, color = system)) +
+  geom_smooth() +
+  geom_point()
+```
+
+### mean sigma
+
+```{r}
+ggplot(wheelsum, aes(date, sig, color = system)) +
   geom_smooth() +
   geom_point()
 ```
