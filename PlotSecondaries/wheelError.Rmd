@@ -25,7 +25,7 @@ library(lubridate)
 library(here)
  
 #set parameters
-from <- '2019-02-01'
+from <- '2018-02-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
@@ -66,7 +66,7 @@ wheelsum <- out.s %>%
   group_by(wheel, system) %>%
   summarize(
     nFm = mean(normFm),
-    nFm.s = sd(normFm),
+    nFm.sd = sd(normFm),
     sig = mean(sigma),
     sig.sd = sd(sigma),
     ferr = mean(frep_err),
@@ -111,6 +111,14 @@ ggplot(wheelsum, aes(N, sig.sd, color = system)) +
 
 ```{r}
 ggplot(wheelsum, aes(date, sig.sd, color = system)) +
+  geom_smooth() +
+  geom_point()
+```
+
+### SD of normFm
+
+```{r}
+ggplot(wheelsum, aes(date, nFm.sd, color = system)) +
   geom_smooth() +
   geom_point()
 ```
