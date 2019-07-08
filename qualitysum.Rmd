@@ -1,0 +1,161 @@
+---
+title: "Standards"
+author: "Brett Longworth"
+date: "6/27/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+#Load Libraries
+library(dplyr)
+library(knitr)
+library(amstools)
+library(ggplot2)
+library(here)
+library(lubridate)
+
+
+#set parameters- from, to, sys not used if loading from file
+from <- '2016-01-24'
+to <- 'present'
+size <- c(40,300)
+msig <- 10
+mnfm <- .02
+mferr <- .1
+
+#Set digits for output
+options(digits=4)
+
+
+#Load QC data from file
+load("qcData.rda")
+
+   data <- std %>% 
+    filter(gf_co2_qty > 40, gf_co2_qty < 300, #Select size range
+           tp_date_pressed >= from,
+           lab == "OSG", #Use only samples from the SPL
+           is.na(q_flag), #Check for q_flag
+           sigma < 10, sigma > -10, #Select reasonable sigmas
+           #normFm < 0.02, normFm > -0.02, #Select reasonable Fm
+           frep_err < 0.10
+           ) 
+    
+  #Filter data (normalizing standards)
+  ox <- data %>% 
+    filter(primary == TRUE,
+           rec_num %in% c(113385, 113386, 133143, 133144, 149822) #look at normalizing ox-I
+    ) %>%
+    group_by(wheel, system) %>%
+    summarize(
+      fm.s = sd(f_modern),
+      sig = mean(sigma),
+      sig.s = sd(sigma),
+      rep_err.m = mean(rep_err),
+      intrerr = intrErr(sd(f_modern), mean(rep_err)),
+      N = length(f_modern)
+    ) %>%
+    mutate(date = mdy(substr(wheel, 6, 11))) %>%
+    arrange(date)
+ 
+    # Filter data (all standards)
+    std <- data %>% 
+      filter(f_modern > .1, f_modern < 1.6) %>%
+      group_by(wheel, system) %>%
+    summarize(
+      nFm = mean(normFm),
+      nFm.sd = sd(normFm),
+      sig = mean(sigma),
+      sig.sd = sd(sigma),
+      ferr = mean(frep_err),
+      N = n()
+      ) %>%
+    mutate(date = mdy(substr(wheel, 6, 11))) %>%
+    arrange(date)
+```
+
+# Summary
+
+Performance of primary standards and all standards by wheel are the best metric I've come up with for machine performance. 
+
+Reproducibility of standards is given by the standard deviation of the normalized fraction modern of all normalizing OX-I's on a wheel. Performance of all standards (secondary and primary) is given by the standard deviation of the sigma of all standards on a wheel.
+
+Outliers (sigma > 10), poor performers (reported error > 0.1), small(ish) samples (<40umol), dead samples (Fm < 0.1), and samples not from the SPL have been removed to allow a more even comparison.
+
+# Over time
+
+This section presents these metrics for the period 2016 to present. 
+
+```{r}
+std %>% 
+  ungroup() %>%
+  group_by(system) %>% 
+  summarize(sig.sd = mean(sig.sd, na.rm = TRUE)) %>%
+  kable(caption = "SD of sigmas")
+```
+
+```{r}
+ox %>% 
+  ungroup() %>%
+  group_by(system) %>% 
+  summarize(fm.s = mean(fm.s, na.rm = TRUE)) %>%
+  kable(caption = "SD of OX-I")
+```
+
+``` {r plots}
+ggplot(ox, aes(date, fm.s, color = system)) + 
+  geom_smooth() +
+  geom_point() +
+  ggtitle("SD of OX-I by wheel")
+```
+
+```{r}
+ggplot(std, aes(date, sig.sd, color = system)) +
+  geom_smooth() +
+  geom_point() +
+  ggtitle("SD of standard sigmas by wheel")
+```
+
+# Most recent data
+
+This section presents these metrics from May, 2019 to present. 
+```{r}
+ox <- filter(ox, date > '2019-05-01')
+std <- filter(std, date > '2019-05-01')
+```
+
+```{r}
+std %>% 
+  ungroup() %>%
+  group_by(system) %>% 
+  summarize(sig.sd = mean(sig.sd, na.rm = TRUE)) %>%
+  kable(caption = "SD of sigmas")
+```
+
+```{r}
+ox %>% 
+  ungroup() %>%
+  group_by(system) %>% 
+  summarize(fm.s = mean(fm.s, na.rm = TRUE)) %>%
+  kable(caption = "SD of OX-I")
+```
+
+``` {r, warning = FALSE}
+ggplot(ox, aes(date, fm.s, color = system)) + 
+  #geom_smooth() +
+  geom_point() +
+  ggtitle("SD of OX-I by wheel")
+```
+
+```{r}
+ggplot(std, aes(date, sig.sd, color = system)) +
+  #geom_smooth() +
+  geom_point() +
+  ggtitle("SD of standard sigmas by wheel")
+```
