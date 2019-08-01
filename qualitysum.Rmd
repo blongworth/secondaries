@@ -3,8 +3,8 @@ title: "NOSAMS Performance by Wheel"
 author: "Brett Longworth"
 date: "`r Sys.Date()`"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -22,6 +22,7 @@ library(ggplot2)
 library(here)
 library(lubridate)
 
+theme_set(theme_light())
 #set parameters- from, to, sys not used if loading from file
 from <- '2016-01-24'
 to <- 'present'
@@ -107,6 +108,7 @@ ox %>%
 ggplot(ox, aes(date, fm.s, color = system)) + 
   geom_smooth() +
   geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
   ggtitle("SD of OX-I by wheel")
 ```
 
@@ -124,6 +126,7 @@ std %>%
 ggplot(std, aes(date, sig.sd, color = system)) +
   geom_smooth() +
   geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
   ggtitle("SD of standard sigmas by wheel")
 ```
 
@@ -151,6 +154,7 @@ ox %>%
 ggplot(ox, aes(date, fm.s, color = system)) + 
   #geom_smooth() +
   geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
   ggtitle("SD of OX-I by wheel")
 ```
 
@@ -168,5 +172,6 @@ std %>%
 ggplot(std, aes(date, sig.sd, color = system)) +
   #geom_smooth() +
   geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
   ggtitle("SD of standard sigmas by wheel")
 ```
