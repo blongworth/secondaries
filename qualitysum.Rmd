@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
 #TODO: check for DOC standards
+#TODO: Add plots for normfm.mean or sigma.mean
 
 #Load Libraries
 library(dplyr)
@@ -40,16 +41,19 @@ load("qcData.rda")
 data <- std %>% 
   filter(gf_co2_qty > 40, gf_co2_qty < 300, #Select size range
          tp_date_pressed >= from,
+         rec_num != 53212,
          lab == "OSG", #Use only samples from the SPL
          is.na(q_flag), #Check for q_flag
          sigma < 10, sigma > -10, #Select reasonable sigmas
          #normFm < 0.02, normFm > -0.02, #Select reasonable Fm
-         frep_err < 0.10
+         frep_err < 0.10,
+         gf_devel == 0,
+         is.na(gf_test)
          ) 
   
 #Filter data (normalizing standards)
 ox <- data %>% 
-  filter(primary == TRUE,
+  filter(#primary == TRUE,
          rec_num %in% c(113385, 113386, 133143, 133144, 149822, 149823) #look at normalizing ox-I
   ) %>%
   group_by(wheel, system) %>%
@@ -73,6 +77,7 @@ summarize(
   nFm.sd = sd(normFm),
   sig = mean(sigma),
   sig.sd = sd(sigma),
+  err = mean(rep_err),
   ferr = mean(frep_err),
   N = n()
   ) %>%
@@ -100,7 +105,8 @@ This section presents these metrics for the period 2016 to present.
 ox %>% 
   ungroup() %>%
   group_by(system) %>% 
-  summarize(fm.s = mean(fm.s, na.rm = TRUE)) %>%
+  summarize(fm.s = mean(fm.s, na.rm = TRUE),
+            error = mean(rep_err.m)) %>%
   kable(caption = "SD of OX-I")
 ```
 
@@ -118,8 +124,11 @@ ggplot(ox, aes(date, fm.s, color = system)) +
 std %>% 
   ungroup() %>%
   group_by(system) %>% 
-  summarize(sig.sd = mean(sig.sd, na.rm = TRUE)) %>%
-  kable(caption = "SD of sigmas")
+  summarize(sig.sd = mean(sig.sd, na.rm = TRUE),
+            sigma.mean = mean(sig, na.rm = TRUE),
+            nFm.mean = mean(nFm, na.rm = TRUE),
+            rep_err.mean = mean(err, na.rm = TRUE)) %>%
+  kable(caption = "Summary Statistics for all standards")
 ```
 
 ```{r}
@@ -130,6 +139,14 @@ ggplot(std, aes(date, sig.sd, color = system)) +
   ggtitle("SD of standard sigmas by wheel")
 ```
 
+```{r}
+ggplot(std, aes(date, sig, color = system)) +
+  geom_hline(yintercept = 0) +
+  geom_smooth() +
+  geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
+  ggtitle("Mean of standard sigmas by wheel")
+```
 
 # Most recent data
 
@@ -146,7 +163,8 @@ std <- filter(std, date > '2019-05-01')
 ox %>% 
   ungroup() %>%
   group_by(system) %>% 
-  summarize(fm.s = mean(fm.s, na.rm = TRUE)) %>%
+  summarize(fm.s = mean(fm.s, na.rm = TRUE),
+            error = mean(rep_err.m)) %>%
   kable(caption = "SD of OX-I")
 ```
 
@@ -164,8 +182,11 @@ ggplot(ox, aes(date, fm.s, color = system)) +
 std %>% 
   ungroup() %>%
   group_by(system) %>% 
-  summarize(sig.sd = mean(sig.sd, na.rm = TRUE)) %>%
-  kable(caption = "SD of sigmas")
+  summarize(sig.sd = mean(sig.sd, na.rm = TRUE),
+            sigma.mean = mean(sig, na.rm = TRUE),
+            nFm.mean = mean(nFm, na.rm = TRUE),
+            rep_err.mean = mean(err, na.rm = TRUE)) %>%
+  kable(caption = "Summary Statistics for all standards")
 ```
 
 ```{r}
@@ -174,4 +195,12 @@ ggplot(std, aes(date, sig.sd, color = system)) +
   geom_point() +
   scale_colour_brewer(type = "div", palette = "Set2") +
   ggtitle("SD of standard sigmas by wheel")
+```
+
+```{r}
+ggplot(std, aes(date, sig, color = system)) +
+  geom_hline(yintercept = 0) +
+  geom_point() +
+  scale_colour_brewer(type = "div", palette = "Set2") +
+  ggtitle("Mean of standard sigmas by wheel")
 ```
