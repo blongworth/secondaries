@@ -1,7 +1,7 @@
 ---
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 Secondary standard analysis
 ========================================================
@@ -20,13 +20,14 @@ library(ggplot2)
 library(knitr)
 library(amstools)
 library(stringr)
+library(here)
  
 #set parameters
-from <- '2017-07-01'
+from <- '2018-08-01'
 to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 size <- c(40,300)
-msig <- 5
+msig <- 10
 mnfm <- .02
 mferr <- .1
 
@@ -37,7 +38,7 @@ options(digits=4)
 #out <- getQCData(from, to, sys)
 
 #Load QC data from file
-load("qcData.rda")
+load(here("qcData.rda"))
 
 #Filter data
 out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizing ox-I
@@ -49,8 +50,10 @@ out.s <- filter(out, primary == FALSE, # rec_num != 113385, #don't use normalizi
                 is.na(q_flag), #Check for q_flag
                 abs(sigma) < msig, #Select reasonable sigmas
                 abs(normFm) < mnfm, #Select reasonable Fm
-                frep_err < mferr
-              )
+                frep_err < mferr,
+                rec_num != 53212,
+                gf_devel == 0,
+                is.na(gf_test))
 ```
 
 Analysis of performance of all secondary standards for `r sys` from `r from` to `r to`. Sample size is from `r size[1]` to `r size[2]`umol, outliers have been removed by sigma (less than `r msig`) and normalized Fm (less than `r mnfm`), and only secondaries Fm > .1 used.
