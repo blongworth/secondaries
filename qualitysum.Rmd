@@ -3,16 +3,17 @@ title: "NOSAMS Performance by Wheel"
 author: "Brett Longworth"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
+
 ```{r Setup, echo=FALSE, warning=FALSE, message=FALSE}
-#TODO: check for DOC standards
+#TODO: check for DOC standards(53212 removed)
 #TODO: Add plots for normfm.mean or sigma.mean
 
 #Load Libraries
@@ -23,9 +24,11 @@ library(ggplot2)
 library(here)
 library(lubridate)
 
+# set plotting theme
 theme_set(theme_light())
+
 #set parameters- from, to, sys not used if loading from file
-from <- '2016-01-24'
+from <- '2018-01-01'
 to <- 'present'
 size <- c(40,300)
 msig <- 10
@@ -65,7 +68,9 @@ ox <- data %>%
     intrerr = intrErr(sd(f_modern), mean(rep_err)),
     N = length(f_modern)
   ) %>%
-  mutate(date = mdy(substr(wheel, 6, 11))) %>%
+  mutate(date = mdy(substr(wheel, 6, 11)),
+         phase = ifelse(date < '2019-05-01', "before", "after"),
+         phasesys = paste(phase, system)) %>%
   arrange(date)
 
 # Filter data (all standards)
@@ -81,7 +86,9 @@ summarize(
   ferr = mean(frep_err),
   N = n()
   ) %>%
-mutate(date = mdy(substr(wheel, 6, 11))) %>%
+mutate(date = mdy(substr(wheel, 6, 11)),
+       phase = ifelse(date < '2019-05-01', "before", "after"),
+       phasesys = paste(phase, system)) %>%
 arrange(date)
 ```
 
@@ -111,11 +118,21 @@ ox %>%
 ```
 
 ``` {r plots}
-ggplot(ox, aes(date, fm.s, color = system)) + 
-  geom_smooth() +
+ggplot(ox, aes(date, fm.s * 1000, color = system)) + 
+  geom_smooth(aes(color = phasesys), 
+              method = "lm", 
+              formula = y ~ 1,
+              se = FALSE,
+              show.legend = FALSE) +
   geom_point() +
   scale_colour_brewer(type = "div", palette = "Set2") +
-  ggtitle("SD of OX-I by wheel")
+  scale_color_manual(values = c("#66C2A5", "#FC8D62","#66C2A5", 
+                                "#FC8D62","#66C2A5", "#FC8D62")) +
+  guides(fill = FALSE) +
+  ylim(0, 7) +
+  labs(title = "Normalizing standard variability",
+       subtitle = "by wheel",
+       y = "SD of Fm (permil)")
 ```
 
 ## All Standards
@@ -133,10 +150,18 @@ std %>%
 
 ```{r}
 ggplot(std, aes(date, sig.sd, color = system)) +
-  geom_smooth() +
+  geom_smooth(aes(color = phasesys), 
+              method = "lm", 
+              formula = y ~ 1,
+              se = FALSE) +
   geom_point() +
   scale_colour_brewer(type = "div", palette = "Set2") +
-  ggtitle("SD of standard sigmas by wheel")
+  scale_color_manual(values = c("#66C2A5", "#FC8D62","#66C2A5", 
+                                "#FC8D62","#66C2A5", "#FC8D62")) +
+  ylim(0, 3.5) +
+  labs(title = "Variability of standard sigmas (Z-scores)",
+       subtitle = "by wheel",
+       y = "SD of sigmas")
 ```
 
 ```{r}
