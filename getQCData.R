@@ -7,17 +7,16 @@ library(amstools)
 
 #set parameters
 from <- '2014-09-01'
-to <- 'present' #present or date
 sys <- 'both' #cfams, usams, ams1 or both
 
 #Get intcal data
-out <- getQCData(from, to, sys, getcurrents = TRUE)
+out <- getQCData(from, sys = sys, getcurrents = TRUE)
 
 #Get Standards table data
-std <- getQCData(from, to, sys, intcal = FALSE, getcurrents = TRUE)
+std <- getQCData(from, sys = sys, intcal = FALSE, getcurrents = TRUE)
 
 #Get qc data
-qc <- getQCData(from, to, sys, useQC = TRUE)
+qc <- getQCData(from, sys = sys, useQC = TRUE)
 
 #write to file
 save(out, std, qc,  file = "qcData.rda")
