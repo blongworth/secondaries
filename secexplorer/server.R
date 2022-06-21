@@ -1,4 +1,4 @@
-library(ggvis)
+#library(ggvis)
 library(dplyr)
 library(plotly)
 library(RColorBrewer)
