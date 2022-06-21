@@ -1,5 +1,5 @@
 library(shiny)
-library(ggvis)
+#library(ggvis)
 library(plotly)
 
 # Secondary explorer shiny app.
